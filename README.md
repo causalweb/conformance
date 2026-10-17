@@ -38,6 +38,8 @@ node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- implementation-
 
 The CLI rejects a spec checkout that is not at its exact pinned commit. Unit tests use a deliberately minimal fake specification fixture and do not constitute a protocol result.
 
+Use the [implementation report template](REPORT_TEMPLATE.md) when publishing a result. It records the runner/spec revisions, commands, trust and storage assumptions, explicit exclusions, and limits that a raw pass count cannot establish.
+
 ## Status and limits
 
 The runner currently covers 32 evidence-verification cases and 17 selected prefix-evaluation cases. Context reduction, HTTP binding behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
