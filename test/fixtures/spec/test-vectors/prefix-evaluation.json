@@ -20,6 +20,16 @@
       "id": "PFX-012",
       "kind": "context-reduction",
       "expected": []
+    },
+    {
+      "id": "PFX-013",
+      "kind": "context-reduction",
+      "expected": []
+    },
+    {
+      "id": "PFX-020",
+      "kind": "context-reduction",
+      "expected": []
     }
   ]
 }

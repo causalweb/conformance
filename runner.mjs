@@ -134,6 +134,13 @@ function runPrefix({ spec, command, revision }) {
   const vector = readJson(resolve(spec, "test-vectors", vectorName));
   if (vector.format !== "causal-web-prefix-evaluation-v1" || !Array.isArray(vector.cases))
     throw new Error(`${vectorName} is not a prefix evaluation vector`);
+  const vectorIds = new Set(
+    vector.cases.map((testCase) =>
+      string(object(testCase, `${vectorName} case`).id, `${vectorName} case id`),
+    ),
+  );
+  if ([...excluded].some((id) => !vectorIds.has(id)))
+    throw new Error("prefix excluded_case_ids contains an unknown vector case");
   const results = [];
   for (const testCase of vector.cases) {
     const caseObject = object(testCase, `${vectorName} case`);
