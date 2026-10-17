@@ -1,0 +1,6 @@
+{
+  "format": "causal-web-conformance-http-client-confirmation-v1",
+  "description": "Execution metadata for HTTP requirement parsing and constrained-response confirmation. Vector semantics remain in the pinned specification. Cross-origin redirect forwarding is excluded because it requires an HTTP agent rather than a response/parser implementation.",
+  "vector": "http-outcomes.json",
+  "excluded_case_ids": ["HTTP-006"]
+}

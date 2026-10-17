@@ -19,6 +19,18 @@ process.stdin.on("end", () => {
     process.stdout.write(`${JSON.stringify(response)}\n`);
     return;
   }
+  if (input.profile === "http-client-confirmation-v1") {
+    const result = {
+      client_accepts_constrained_success: wrong
+        ? !input.case.client_accepts_constrained_success
+        : input.case.client_accepts_constrained_success,
+      ...(input.case.client_accepts_causal_confirmation === undefined
+        ? {}
+        : { client_accepts_causal_confirmation: input.case.client_accepts_causal_confirmation }),
+    };
+    process.stdout.write(`${JSON.stringify({ id: input.case.id, result })}\n`);
+    return;
+  }
   process.stdout.write(
     `${JSON.stringify({
       id: input.case.id,

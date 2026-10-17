@@ -8,6 +8,7 @@ const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..");
 const PROFILE = "evidence-verification-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
+const HTTP_PROFILE = "http-client-confirmation-v1";
 
 function readJson(path) {
   const value = JSON.parse(readFileSync(path, "utf8"));
@@ -40,7 +41,8 @@ function expectedPosition(value) {
 }
 
 function profileFile(name) {
-  if (![PROFILE, PREFIX_PROFILE].includes(name)) throw new Error(`unsupported profile ${name}`);
+  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE].includes(name))
+    throw new Error(`unsupported profile ${name}`);
   return resolve(root, "profiles", `${name}.json`);
 }
 
@@ -184,9 +186,69 @@ function runPrefix({ spec, command, revision }) {
   };
 }
 
+function expectedHttp(value, id) {
+  const entry = object(value, `${id} expected`);
+  if (typeof entry.client_accepts_constrained_success !== "boolean")
+    throw new Error(`${id} lacks constrained-success expectation`);
+  const expected = { client_accepts_constrained_success: entry.client_accepts_constrained_success };
+  if (entry.client_accepts_causal_confirmation !== undefined) {
+    if (typeof entry.client_accepts_causal_confirmation !== "boolean")
+      throw new Error(`${id} has invalid confirmation expectation`);
+    expected.client_accepts_causal_confirmation = entry.client_accepts_causal_confirmation;
+  }
+  return expected;
+}
+
+function runHttp({ spec, command, revision }) {
+  const profile = readJson(profileFile(HTTP_PROFILE));
+  if (profile.format !== "causal-web-conformance-http-client-confirmation-v1")
+    throw new Error("unsupported local HTTP profile format");
+  const vectorName = string(profile.vector, "HTTP profile vector");
+  const excluded = new Set(object(profile, "HTTP profile").excluded_case_ids ?? []);
+  if (![...excluded].every((id) => typeof id === "string"))
+    throw new Error("HTTP excluded_case_ids must be strings");
+  const vector = readJson(resolve(spec, "test-vectors", vectorName));
+  if (vector.format !== "causal-web-http-outcomes-v1" || !Array.isArray(vector.cases))
+    throw new Error(`${vectorName} is not an HTTP outcome vector`);
+  const vectorIds = new Set(
+    vector.cases.map((testCase) =>
+      string(object(testCase, `${vectorName} case`).id, `${vectorName} case id`),
+    ),
+  );
+  if ([...excluded].some((id) => !vectorIds.has(id)))
+    throw new Error("HTTP excluded_case_ids contains an unknown vector case");
+  const results = [];
+  for (const testCase of vector.cases) {
+    const caseObject = object(testCase, `${vectorName} case`);
+    const id = string(caseObject.id, `${vectorName} case id`);
+    if (excluded.has(id)) continue;
+    const want = expectedHttp(caseObject, id);
+    const response = invoke(command, {
+      version: 1,
+      profile: HTTP_PROFILE,
+      vector_file: vectorName,
+      vector,
+      case: caseObject,
+    });
+    if (response.id !== id || !isDeepStrictEqual(response.result, want))
+      throw new Error(
+        `${id}: expected ${JSON.stringify(want)}, adapter returned ${JSON.stringify(response)}`,
+      );
+    results.push({ id, result: want });
+  }
+  return {
+    format: "causal-web-conformance-report-v1",
+    profile: HTTP_PROFILE,
+    spec_revision: revision,
+    passed: results.length,
+    results,
+  };
+}
+
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
+  if (profile === HTTP_PROFILE) return runHttp({ spec, command, revision });
   throw new Error(`unsupported profile ${profile}`);
 }
 
@@ -238,5 +300,6 @@ if (resolve(process.argv[1] ?? "") === here) {
 
 export const profile = PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
+export const httpProfile = HTTP_PROFILE;
 export const localRoot = root;
 export const vectorName = (path) => basename(path);

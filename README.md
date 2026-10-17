@@ -20,6 +20,8 @@ Permitted outcomes are `accept`, `expired`, `reject-request`, and `unsupported`.
 
 It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context-reduction cases, and this profile tests a verifier/snapshot evaluator rather than a Core Carrier reducer. The exclusion is explicit in the profile manifest; it is not a passing result for those requirements.
 
+`http-client-confirmation-v1` sends 11 selected cases from `http-outcomes.json`. It exercises requirement-field rejection/limits and the client-side rule that a constrained success requires an allowed 2xx response with exactly one `Causal-Result: satisfied`; a confirmed 404 remains an application non-success. It explicitly excludes `HTTP-006`, cross-origin redirect forwarding, because that behavior belongs to an HTTP agent profile rather than a response/parser implementation.
+
 The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a five-second timeout and a one-megabyte output limit.
 
 ## Run
@@ -34,6 +36,7 @@ Select a non-default profile explicitly:
 
 ```sh
 node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- implementation-adapter [arguments]
+node runner.mjs --spec ../spec --profile http-client-confirmation-v1 -- implementation-adapter [arguments]
 ```
 
 The CLI rejects a spec checkout that is not at its exact pinned commit. Unit tests use a deliberately minimal fake specification fixture and do not constitute a protocol result.
@@ -42,6 +45,6 @@ Use the [implementation report template](REPORT_TEMPLATE.md) when publishing a r
 
 ## Status and limits
 
-The runner currently covers 32 evidence-verification cases and 17 selected prefix-evaluation cases. Context reduction, HTTP binding behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
+The runner currently covers 32 evidence-verification cases, 17 selected prefix-evaluation cases, and 11 selected HTTP client-confirmation cases. Context reduction, redirect forwarding, HTTP server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
 
 Code and tooling are available under Apache-2.0 or MIT. Documentation prose is CC-BY-4.0. See [LICENSE.md](LICENSE.md).

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { prefixProfile, profile, run } from "../runner.mjs";
+import { httpProfile, prefixProfile, profile, run } from "../runner.mjs";
 
 const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..", "..");
@@ -46,6 +46,25 @@ describe("prefix-evaluation runner", () => {
       () =>
         run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: prefixProfile }),
       /PFX-001/,
+    );
+  });
+});
+
+describe("HTTP client-confirmation runner", () => {
+  it("executes response/parser cases and excludes redirect forwarding", () => {
+    const report = run({ spec, command: adapter, revision: "test", profile: httpProfile });
+    assert.equal(report.profile, httpProfile);
+    assert.equal(report.passed, 2);
+    assert.deepEqual(
+      report.results.map((result) => result.id),
+      ["HTTP-001", "HTTP-009"],
+    );
+  });
+
+  it("rejects a mismatched HTTP client result", () => {
+    assert.throws(
+      () => run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: httpProfile }),
+      /HTTP-001/,
     );
   });
 });

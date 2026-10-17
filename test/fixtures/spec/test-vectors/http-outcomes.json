@@ -1,0 +1,21 @@
+{
+  "format": "causal-web-http-outcomes-v1",
+  "cases": [
+    {
+      "id": "HTTP-001",
+      "response": { "status": 200, "causal_result": "satisfied" },
+      "client_accepts_constrained_success": true
+    },
+    {
+      "id": "HTTP-006",
+      "response": { "status": 302, "cross_origin": true },
+      "client_accepts_constrained_success": false
+    },
+    {
+      "id": "HTTP-009",
+      "response": { "status": 404, "causal_result": "satisfied" },
+      "client_accepts_causal_confirmation": true,
+      "client_accepts_constrained_success": false
+    }
+  ]
+}
