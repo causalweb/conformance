@@ -3,13 +3,21 @@ import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { httpProfile, observerProfile, prefixProfile, profile, run } from "../runner.mjs";
+import {
+  httpProfile,
+  observerProfile,
+  prefixProfile,
+  profile,
+  run,
+  transportProfile,
+} from "../runner.mjs";
 
 const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..", "..");
 const fixture = resolve(root, "test", "fixture-adapter.mjs");
 const spec = resolve(root, "test", "fixtures", "spec");
 const adapter = [process.execPath, fixture];
+const transportAdapter = [process.execPath, resolve(root, "test", "transport-fixture-server.mjs")];
 
 describe("evidence-verification runner", () => {
   it("executes every configured vector case through a JSON Lines adapter", () => {
@@ -90,6 +98,35 @@ describe("HTTP observer runner", () => {
           profile: observerProfile,
         }),
       /OBS-001/,
+    );
+  });
+});
+
+describe("HTTP transport-server runner", () => {
+  it("sends raw loopback field lines to a test-only server adapter", async () => {
+    const report = await run({
+      spec,
+      command: transportAdapter,
+      revision: "test",
+      profile: transportProfile,
+    });
+    assert.equal(report.profile, transportProfile);
+    assert.equal(report.passed, 2);
+    assert.deepEqual(
+      report.results.map((result) => result.id),
+      ["TRN-001", "TRN-003"],
+    );
+  });
+
+  it("rejects a mismatched transport response", async () => {
+    await assert.rejects(
+      run({
+        spec,
+        command: [...transportAdapter, "--wrong"],
+        revision: "test",
+        profile: transportProfile,
+      }),
+      /TRN-001/,
     );
   });
 });

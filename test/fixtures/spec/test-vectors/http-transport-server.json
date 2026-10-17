@@ -1,0 +1,24 @@
+{
+  "format": "causal-web-http-transport-server-v1",
+  "cases": [
+    {
+      "id": "TRN-001",
+      "request": { "method": "GET", "path": "/observe/TRN-001", "fixture_requirements": true },
+      "expected": {
+        "status": 412,
+        "causal_result": "unsatisfied",
+        "cache_control": "no-store",
+        "read_calls": 1,
+        "outcomes": [
+          { "index": 0, "outcome": "unsatisfied", "retryable": true },
+          { "index": 1, "outcome": "unsatisfied", "retryable": true }
+        ]
+      }
+    },
+    {
+      "id": "TRN-003",
+      "request": { "method": "GET", "path": "/ordinary" },
+      "expected": { "status": 204, "causal_result": null, "read_calls": 0 }
+    }
+  ]
+}

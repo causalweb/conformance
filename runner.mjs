@@ -1,5 +1,6 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { createConnection } from "node:net";
 import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
@@ -10,6 +11,7 @@ const PROFILE = "evidence-verification-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
 const OBSERVER_PROFILE = "http-observer-v1";
+const TRANSPORT_PROFILE = "http-transport-server-v1";
 
 function readJson(path) {
   const value = JSON.parse(readFileSync(path, "utf8"));
@@ -42,7 +44,7 @@ function expectedPosition(value) {
 }
 
 function profileFile(name) {
-  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE, OBSERVER_PROFILE].includes(name))
+  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE, OBSERVER_PROFILE, TRANSPORT_PROFILE].includes(name))
     throw new Error(`unsupported profile ${name}`);
   return resolve(root, "profiles", `${name}.json`);
 }
@@ -297,11 +299,228 @@ function runObserver({ spec, command, revision }) {
   };
 }
 
+function wait(ms) {
+  return new Promise((resolveTimeout) => setTimeout(resolveTimeout, ms));
+}
+
+function responseHeaders(lines) {
+  const headers = new Map();
+  for (const line of lines) {
+    const separator = line.indexOf(":");
+    if (separator <= 0) throw new Error("transport adapter returned an invalid HTTP header");
+    const name = line.slice(0, separator).trim().toLowerCase();
+    const value = line.slice(separator + 1).trim();
+    const values = headers.get(name) ?? [];
+    values.push(value);
+    headers.set(name, values);
+  }
+  return headers;
+}
+
+function rawRequest(origin, lines) {
+  return new Promise((resolveRequest, rejectRequest) => {
+    const socket = createConnection({ host: origin.hostname, port: Number(origin.port) });
+    const chunks = [];
+    let timeout;
+    const fail = (error) => {
+      clearTimeout(timeout);
+      socket.destroy();
+      rejectRequest(error);
+    };
+    timeout = setTimeout(() => fail(new Error("transport adapter request timed out")), 5000);
+    socket.on("error", fail);
+    socket.on("connect", () => socket.end(`${lines.join("\r\n")}\r\n\r\n`, "ascii"));
+    socket.on("data", (chunk) => chunks.push(chunk));
+    socket.on("end", () => {
+      clearTimeout(timeout);
+      try {
+        const bytes = Buffer.concat(chunks);
+        const end = bytes.indexOf("\r\n\r\n");
+        if (end < 0) throw new Error("transport adapter response lacks a header terminator");
+        const head = bytes.subarray(0, end).toString("ascii").split("\r\n");
+        const match = /^HTTP\/1\.1 ([0-9]{3})(?: |$)/.exec(head[0] ?? "");
+        if (!match) throw new Error("transport adapter response lacks an HTTP/1.1 status");
+        resolveRequest({
+          status: Number(match[1]),
+          headers: responseHeaders(head.slice(1)),
+          body: bytes.subarray(end + 4).toString("utf8"),
+        });
+      } catch (error) {
+        rejectRequest(error);
+      }
+    });
+  });
+}
+
+function header(response, name) {
+  const values = response.headers.get(name.toLowerCase());
+  return values?.join(", ") ?? null;
+}
+
+async function launchTransport(command) {
+  const [program, ...arguments_] = command;
+  if (!program) throw new Error("a transport adapter command is required after --");
+  const child = spawn(program, arguments_, {
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  const ready = await new Promise((resolveReady, rejectReady) => {
+    let output = "";
+    const timeout = setTimeout(() => {
+      child.kill();
+      rejectReady(new Error("transport adapter did not announce readiness"));
+    }, 5000);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+      const newline = output.indexOf("\n");
+      if (newline < 0) return;
+      clearTimeout(timeout);
+      try {
+        const value = object(
+          JSON.parse(output.slice(0, newline)),
+          "transport adapter ready message",
+        );
+        if (value.format !== "causal-web-conformance-transport-server-v1")
+          throw new Error("transport adapter used an unsupported ready format");
+        const origin = new URL(string(value.origin, "transport adapter origin"));
+        if (origin.protocol !== "http:" || origin.hostname !== "127.0.0.1" || !origin.port)
+          throw new Error("transport adapter must bind an explicit 127.0.0.1 HTTP port");
+        resolveReady({ child, origin });
+      } catch (error) {
+        child.kill();
+        rejectReady(error);
+      }
+    });
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      rejectReady(error);
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timeout);
+      rejectReady(new Error(`transport adapter exited ${code}: ${stderr}`));
+    });
+  });
+  return ready;
+}
+
+async function stopTransport(child) {
+  if (child.exitCode !== null) return;
+  child.kill();
+  await Promise.race([new Promise((resolveExit) => child.once("exit", resolveExit)), wait(1000)]);
+  if (child.exitCode === null) child.kill("SIGKILL");
+}
+
+function expectedTransport(value, id) {
+  const expected = object(value, `${id} expected`);
+  if (!Number.isInteger(expected.status) || expected.status < 100 || expected.status > 599)
+    throw new Error(`${id} has an invalid status expectation`);
+  if (
+    expected.causal_result !== null &&
+    !["satisfied", "unsatisfied"].includes(expected.causal_result)
+  )
+    throw new Error(`${id} has an invalid causal-result expectation`);
+  if (!Number.isInteger(expected.read_calls) || expected.read_calls < 0)
+    throw new Error(`${id} has an invalid read-call expectation`);
+  return expected;
+}
+
+async function runTransport({ spec, command, revision }) {
+  const profile = readJson(profileFile(TRANSPORT_PROFILE));
+  if (profile.format !== "causal-web-conformance-http-transport-server-v1")
+    throw new Error("unsupported local transport profile format");
+  const vectorName = string(profile.vector, "transport profile vector");
+  const vector = readJson(resolve(spec, "test-vectors", vectorName));
+  if (vector.format !== "causal-web-http-transport-server-v1" || !Array.isArray(vector.cases))
+    throw new Error(`${vectorName} is not an HTTP transport-server vector`);
+  const { child, origin } = await launchTransport(command);
+  try {
+    const results = [];
+    for (const testCase of vector.cases) {
+      const caseObject = object(testCase, `${vectorName} case`);
+      const id = string(caseObject.id, `${vectorName} case id`);
+      const request = object(caseObject.request, `${id} request`);
+      const want = expectedTransport(caseObject.expected, id);
+      let requirements = [];
+      if (request.fixture_requirements === true) {
+        const fixture = await rawRequest(origin, [
+          `GET /fixture/${id} HTTP/1.1`,
+          "Host: 127.0.0.1",
+          "Connection: close",
+        ]);
+        if (fixture.status !== 200)
+          throw new Error(`${id}: fixture endpoint returned ${fixture.status}`);
+        const body = object(JSON.parse(fixture.body), `${id} fixture response`);
+        if (
+          !Array.isArray(body.requirements) ||
+          !body.requirements.every((value) => typeof value === "string")
+        )
+          throw new Error(`${id}: fixture endpoint returned invalid requirements`);
+        requirements = body.requirements;
+      }
+      const connection =
+        request.connection_nominates_causal === true ? "causal-require, close" : "close";
+      const lines = [
+        `${string(request.method, `${id} method`)} ${string(request.path, `${id} path`)} HTTP/1.1`,
+        "Host: 127.0.0.1",
+        `Connection: ${connection}`,
+        ...(typeof request.raw_causal_require === "string"
+          ? [`Causal-Require: ${request.raw_causal_require}`]
+          : requirements.map((token) => `Causal-Require: "${token}"`)),
+      ];
+      const response = await rawRequest(origin, lines);
+      const got = {
+        status: response.status,
+        causal_result: header(response, "causal-result"),
+        read_calls: Number(header(response, "x-causalweb-conformance-read-calls")),
+        ...(Object.hasOwn(want, "cache_control")
+          ? { cache_control: header(response, "cache-control") }
+          : {}),
+        ...(Object.hasOwn(want, "vary_contains_causal_require")
+          ? {
+              vary_contains_causal_require:
+                header(response, "vary")
+                  ?.split(",")
+                  .some((value) => value.trim().toLowerCase() === "causal-require") === true,
+            }
+          : {}),
+        ...(Object.hasOwn(want, "causal_context")
+          ? { causal_context: header(response, "causal-context") }
+          : {}),
+        ...(Object.hasOwn(want, "body") ? { body: response.body } : {}),
+        ...(Object.hasOwn(want, "outcomes")
+          ? { outcomes: object(JSON.parse(response.body), `${id} problem response`).outcomes }
+          : {}),
+      };
+      if (!isDeepStrictEqual(got, want))
+        throw new Error(
+          `${id}: expected ${JSON.stringify(want)}, adapter returned ${JSON.stringify(got)}`,
+        );
+      results.push({ id, result: want });
+    }
+    return {
+      format: "causal-web-conformance-report-v1",
+      profile: TRANSPORT_PROFILE,
+      spec_revision: revision,
+      passed: results.length,
+      results,
+    };
+  } finally {
+    await stopTransport(child);
+  }
+}
+
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
   if (profile === HTTP_PROFILE) return runHttp({ spec, command, revision });
   if (profile === OBSERVER_PROFILE) return runObserver({ spec, command, revision });
+  if (profile === TRANSPORT_PROFILE) return runTransport({ spec, command, revision });
   throw new Error(`unsupported profile ${profile}`);
 }
 
@@ -344,7 +563,7 @@ if (resolve(process.argv[1] ?? "") === here) {
     }).trim();
     if (actual !== revision)
       throw new Error("spec checkout is not the pinned revision; use an exact detached checkout");
-    console.log(JSON.stringify(run({ spec, command, revision, profile })));
+    console.log(JSON.stringify(await run({ spec, command, revision, profile })));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -355,5 +574,6 @@ export const profile = PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
 export const httpProfile = HTTP_PROFILE;
 export const observerProfile = OBSERVER_PROFILE;
+export const transportProfile = TRANSPORT_PROFILE;
 export const localRoot = root;
 export const vectorName = (path) => basename(path);

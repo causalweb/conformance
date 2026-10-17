@@ -21,6 +21,7 @@ List each profile, its result, and every explicit exclusion.
 | `prefix-evaluation-v1` | `[pass/fail/not run]` | `[count or report artifact]` | `PFX-012, PFX-013, PFX-020` are outside this evaluator-only profile |
 | `http-client-confirmation-v1` | `[pass/fail/not run]` | `[count or report artifact]` | `HTTP-006` redirect forwarding is outside this response/parser profile |
 | `http-observer-v1` | `[pass/fail/not run]` | `[count or report artifact]` | Fixed-cut in-process observer behavior only; no network server, routing, transport, or storage-adapter claim |
+| `http-transport-server-v1` | `[pass/fail/not run]` | `[count or report artifact]` | Raw loopback transport profile only; no TLS, proxy, HTTP/2+, durable-state, or deployment claim |
 
 Do not list a profile as passing if the runner exited unsuccessfully, the specification checkout differed from the runner pin, an adapter transformed vector input outside the profile contract, or a required case was skipped.
 

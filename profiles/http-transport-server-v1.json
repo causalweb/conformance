@@ -1,0 +1,5 @@
+{
+  "format": "causal-web-conformance-http-transport-server-v1",
+  "description": "Execution metadata for raw loopback HTTP/1.1 server behavior. The adapter exposes a test-only fixture endpoint, then receives raw field lines from the runner. This is not a generic network-server, proxy, TLS, or storage-adapter profile.",
+  "vector": "http-transport-server.json"
+}
