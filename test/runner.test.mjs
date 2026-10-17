@@ -160,4 +160,25 @@ describe("HTTP transport-server runner", () => {
       /TRN-001/,
     );
   });
+
+  it("bounds transport readiness and response bytes", async () => {
+    await assert.rejects(
+      run({
+        spec,
+        command: [...transportAdapter, "--oversized-ready"],
+        revision: "test",
+        profile: transportProfile,
+      }),
+      /readiness exceeds output limit/,
+    );
+    await assert.rejects(
+      run({
+        spec,
+        command: [...transportAdapter, "--large-response"],
+        revision: "test",
+        profile: transportProfile,
+      }),
+      /response exceeds output limit/,
+    );
+  });
 });

@@ -1,10 +1,16 @@
 import { createServer } from "node:http";
 
 const wrong = process.argv.includes("--wrong");
+const largeResponse = process.argv.includes("--large-response");
+const oversizedReady = process.argv.includes("--oversized-ready");
 const requirements = ["fixture-one", "fixture-two"];
+if (oversizedReady) {
+  process.stdout.write("x".repeat(1024 * 1024 + 1));
+  setInterval(() => {}, 1000);
+}
 const server = createServer((request, response) => {
   if (request.url?.startsWith("/fixture/")) {
-    const body = JSON.stringify({ requirements });
+    const body = largeResponse ? "x".repeat(1024 * 1024 + 1) : JSON.stringify({ requirements });
     response.writeHead(200, {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
@@ -46,11 +52,12 @@ const server = createServer((request, response) => {
   });
   response.end(body);
 });
-server.listen(0, "127.0.0.1", () => {
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("fixture server lacks an address");
-  process.stdout.write(
-    `${JSON.stringify({ format: "causal-web-conformance-transport-server-v1", origin: `http://127.0.0.1:${address.port}` })}\n`,
-  );
-});
+if (!oversizedReady)
+  server.listen(0, "127.0.0.1", () => {
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("fixture server lacks an address");
+    process.stdout.write(
+      `${JSON.stringify({ format: "causal-web-conformance-transport-server-v1", origin: `http://127.0.0.1:${address.port}` })}\n`,
+    );
+  });
 process.on("SIGTERM", () => server.close(() => process.exit(0)));

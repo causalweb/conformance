@@ -6,7 +6,7 @@ This experimental runner is test infrastructure, not a sandbox, protocol endpoin
 
 The operator supplies an adapter command. The runner invokes that program directly, never through a shell, but it runs with the operator's local privileges. Do not run an unreviewed adapter or assume the runner confines filesystem, network, process, or credential access.
 
-Each JSON Lines invocation has a five-second timeout and a one-megabyte output limit. The transport profile permits only an explicit `http://127.0.0.1:PORT` readiness origin and terminates the child when its cases finish. These controls limit accidental test-process behavior; they do not make a malicious adapter safe or provide a general denial-of-service defense.
+Each JSON Lines invocation has a five-second timeout and a one-megabyte output limit. The transport profile applies the same limit to readiness output and each raw HTTP response, permits only an explicit `http://127.0.0.1:PORT` readiness origin, and terminates the child when its cases finish. These controls limit accidental test-process behavior; they do not make a malicious adapter safe or provide a general denial-of-service defense.
 
 Fixture inputs and results are public test data. Do not pass production evidence, private keys, or live-service credentials to an adapter command. A passing report attests only to the selected profile and exact specification revision; it does not authenticate the adapter, establish production trust, or replace review of the implementation under test.
 

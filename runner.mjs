@@ -13,6 +13,8 @@ const CONTEXT_REDUCTION_PROFILE = "context-reduction-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
 const OBSERVER_PROFILE = "http-observer-v1";
 const TRANSPORT_PROFILE = "http-transport-server-v1";
+const ADAPTER_TIMEOUT_MS = 5000;
+const MAX_ADAPTER_OUTPUT_BYTES = 1024 * 1024;
 
 function readJson(path) {
   const value = JSON.parse(readFileSync(path, "utf8"));
@@ -65,8 +67,8 @@ function invoke(command, input) {
   const result = spawnSync(program, arguments_, {
     encoding: "utf8",
     input: `${JSON.stringify(input)}\n`,
-    maxBuffer: 1024 * 1024,
-    timeout: 5000,
+    maxBuffer: MAX_ADAPTER_OUTPUT_BYTES,
+    timeout: ADAPTER_TIMEOUT_MS,
     windowsHide: true,
   });
   if (result.error) throw new Error(`adapter did not start: ${result.error.message}`);
@@ -397,16 +399,27 @@ function rawRequest(origin, lines) {
   return new Promise((resolveRequest, rejectRequest) => {
     const socket = createConnection({ host: origin.hostname, port: Number(origin.port) });
     const chunks = [];
+    let received = 0;
     let timeout;
     const fail = (error) => {
       clearTimeout(timeout);
       socket.destroy();
       rejectRequest(error);
     };
-    timeout = setTimeout(() => fail(new Error("transport adapter request timed out")), 5000);
+    timeout = setTimeout(
+      () => fail(new Error("transport adapter request timed out")),
+      ADAPTER_TIMEOUT_MS,
+    );
     socket.on("error", fail);
     socket.on("connect", () => socket.end(`${lines.join("\r\n")}\r\n\r\n`, "ascii"));
-    socket.on("data", (chunk) => chunks.push(chunk));
+    socket.on("data", (chunk) => {
+      received += chunk.length;
+      if (received > MAX_ADAPTER_OUTPUT_BYTES) {
+        fail(new Error("transport adapter response exceeds output limit"));
+        return;
+      }
+      chunks.push(chunk);
+    });
     socket.on("end", () => {
       clearTimeout(timeout);
       try {
@@ -441,22 +454,40 @@ async function launchTransport(command) {
     windowsHide: true,
   });
   let stderr = "";
+  let stderrBytes = 0;
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
+    stderrBytes += Buffer.byteLength(chunk);
+    if (stderrBytes > MAX_ADAPTER_OUTPUT_BYTES) {
+      child.kill();
+      return;
+    }
     stderr += chunk;
   });
   const ready = await new Promise((resolveReady, rejectReady) => {
     let output = "";
-    const timeout = setTimeout(() => {
+    let outputBytes = 0;
+    const failReady = (error) => {
+      clearTimeout(timeout);
+      child.stdout.off("data", onOutput);
       child.kill();
-      rejectReady(new Error("transport adapter did not announce readiness"));
-    }, 5000);
+      rejectReady(error);
+    };
+    const timeout = setTimeout(() => {
+      failReady(new Error("transport adapter did not announce readiness"));
+    }, ADAPTER_TIMEOUT_MS);
     child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
+    const onOutput = (chunk) => {
+      outputBytes += Buffer.byteLength(chunk);
+      if (outputBytes > MAX_ADAPTER_OUTPUT_BYTES) {
+        failReady(new Error("transport adapter readiness exceeds output limit"));
+        return;
+      }
       output += chunk;
       const newline = output.indexOf("\n");
       if (newline < 0) return;
       clearTimeout(timeout);
+      child.stdout.off("data", onOutput);
       try {
         const value = object(
           JSON.parse(output.slice(0, newline)),
@@ -472,14 +503,13 @@ async function launchTransport(command) {
         child.kill();
         rejectReady(error);
       }
-    });
+    };
+    child.stdout.on("data", onOutput);
     child.once("error", (error) => {
-      clearTimeout(timeout);
-      rejectReady(error);
+      failReady(error);
     });
     child.once("exit", (code) => {
-      clearTimeout(timeout);
-      rejectReady(new Error(`transport adapter exited ${code}: ${stderr}`));
+      failReady(new Error(`transport adapter exited ${code}: ${stderr}`));
     });
   });
   return ready;
