@@ -31,6 +31,12 @@ process.stdin.on("end", () => {
     process.stdout.write(`${JSON.stringify({ id: input.case.id, result })}\n`);
     return;
   }
+  if (input.profile === "http-observer-v1") {
+    const result = { ...input.case.expected };
+    if (wrong) result.status = result.status === 200 ? 500 : 200;
+    process.stdout.write(`${JSON.stringify({ id: input.case.id, result })}\n`);
+    return;
+  }
   process.stdout.write(
     `${JSON.stringify({
       id: input.case.id,

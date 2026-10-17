@@ -1,0 +1,5 @@
+{
+  "format": "causal-web-conformance-http-observer-v1",
+  "description": "Execution metadata for fixed-cut HTTP observer behavior. The adapter constructs ephemeral test evidence and invokes its public observer API; it is not a network-server, storage-adapter, or HTTP-agent profile.",
+  "vector": "http-observer.json"
+}

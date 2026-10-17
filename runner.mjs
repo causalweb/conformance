@@ -9,6 +9,7 @@ const root = resolve(here, "..");
 const PROFILE = "evidence-verification-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
+const OBSERVER_PROFILE = "http-observer-v1";
 
 function readJson(path) {
   const value = JSON.parse(readFileSync(path, "utf8"));
@@ -41,7 +42,7 @@ function expectedPosition(value) {
 }
 
 function profileFile(name) {
-  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE].includes(name))
+  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE, OBSERVER_PROFILE].includes(name))
     throw new Error(`unsupported profile ${name}`);
   return resolve(root, "profiles", `${name}.json`);
 }
@@ -245,10 +246,62 @@ function runHttp({ spec, command, revision }) {
   };
 }
 
+function expectedObserver(value, id) {
+  const expected = object(value, `${id} expected`);
+  if (!Number.isInteger(expected.status) || expected.status < 100 || expected.status > 599)
+    throw new Error(`${id} has an invalid status expectation`);
+  if (
+    expected.causal_result !== null &&
+    !["satisfied", "unsatisfied"].includes(expected.causal_result)
+  )
+    throw new Error(`${id} has an invalid causal-result expectation`);
+  if (typeof expected.cache_control !== "string" || !expected.cache_control)
+    throw new Error(`${id} lacks a cache-control expectation`);
+  if (!Number.isInteger(expected.read_calls) || expected.read_calls < 0)
+    throw new Error(`${id} has an invalid read-call expectation`);
+  return expected;
+}
+
+function runObserver({ spec, command, revision }) {
+  const profile = readJson(profileFile(OBSERVER_PROFILE));
+  if (profile.format !== "causal-web-conformance-http-observer-v1")
+    throw new Error("unsupported local observer profile format");
+  const vectorName = string(profile.vector, "observer profile vector");
+  const vector = readJson(resolve(spec, "test-vectors", vectorName));
+  if (vector.format !== "causal-web-http-observer-v1" || !Array.isArray(vector.cases))
+    throw new Error(`${vectorName} is not an HTTP observer vector`);
+  const results = [];
+  for (const testCase of vector.cases) {
+    const caseObject = object(testCase, `${vectorName} case`);
+    const id = string(caseObject.id, `${vectorName} case id`);
+    const want = expectedObserver(caseObject.expected, id);
+    const response = invoke(command, {
+      version: 1,
+      profile: OBSERVER_PROFILE,
+      vector_file: vectorName,
+      vector,
+      case: caseObject,
+    });
+    if (response.id !== id || !isDeepStrictEqual(response.result, want))
+      throw new Error(
+        `${id}: expected ${JSON.stringify(want)}, adapter returned ${JSON.stringify(response)}`,
+      );
+    results.push({ id, result: want });
+  }
+  return {
+    format: "causal-web-conformance-report-v1",
+    profile: OBSERVER_PROFILE,
+    spec_revision: revision,
+    passed: results.length,
+    results,
+  };
+}
+
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
   if (profile === HTTP_PROFILE) return runHttp({ spec, command, revision });
+  if (profile === OBSERVER_PROFILE) return runObserver({ spec, command, revision });
   throw new Error(`unsupported profile ${profile}`);
 }
 
@@ -301,5 +354,6 @@ if (resolve(process.argv[1] ?? "") === here) {
 export const profile = PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
 export const httpProfile = HTTP_PROFILE;
+export const observerProfile = OBSERVER_PROFILE;
 export const localRoot = root;
 export const vectorName = (path) => basename(path);

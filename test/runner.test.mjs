@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { httpProfile, prefixProfile, profile, run } from "../runner.mjs";
+import { httpProfile, observerProfile, prefixProfile, profile, run } from "../runner.mjs";
 
 const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..", "..");
@@ -65,6 +65,31 @@ describe("HTTP client-confirmation runner", () => {
     assert.throws(
       () => run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: httpProfile }),
       /HTTP-001/,
+    );
+  });
+});
+
+describe("HTTP observer runner", () => {
+  it("executes fixed-cut observer cases through a JSON Lines adapter", () => {
+    const report = run({ spec, command: adapter, revision: "test", profile: observerProfile });
+    assert.equal(report.profile, observerProfile);
+    assert.equal(report.passed, 2);
+    assert.deepEqual(
+      report.results.map((result) => result.id),
+      ["OBS-001", "OBS-002"],
+    );
+  });
+
+  it("rejects a mismatched observer result", () => {
+    assert.throws(
+      () =>
+        run({
+          spec,
+          command: [...adapter, "--wrong"],
+          revision: "test",
+          profile: observerProfile,
+        }),
+      /OBS-001/,
     );
   });
 });

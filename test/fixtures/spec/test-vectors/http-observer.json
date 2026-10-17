@@ -1,0 +1,36 @@
+{
+  "format": "causal-web-http-observer-v1",
+  "assumptions": {
+    "issuer": "https://issuer.example",
+    "audience": "https://verifier.example/causal",
+    "subject": "opaque-tenant",
+    "domain": "https://issuer.example/domains/orders/2026",
+    "target": "/orders/123",
+    "validation_time": 100
+  },
+  "cases": [
+    {
+      "id": "OBS-001",
+      "request": { "method": "GET" },
+      "expected": {
+        "status": 200,
+        "causal_result": "satisfied",
+        "cache_control": "private, no-store",
+        "vary_contains_causal_require": true,
+        "body": "covered",
+        "read_calls": 1
+      }
+    },
+    {
+      "id": "OBS-002",
+      "request": { "method": "GET" },
+      "expected": {
+        "status": 412,
+        "causal_result": "unsatisfied",
+        "cache_control": "no-store",
+        "outcomes": [{ "index": 0, "outcome": "unsatisfied", "retryable": true }],
+        "read_calls": 1
+      }
+    }
+  ]
+}
