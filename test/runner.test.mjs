@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  contextReductionProfile,
   httpProfile,
   observerProfile,
   prefixProfile,
@@ -54,6 +55,36 @@ describe("prefix-evaluation runner", () => {
       () =>
         run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: prefixProfile }),
       /PFX-001/,
+    );
+  });
+});
+
+describe("context-reduction runner", () => {
+  it("executes selected carrier-reduction cases through a JSON Lines adapter", () => {
+    const report = run({
+      spec,
+      command: adapter,
+      revision: "test",
+      profile: contextReductionProfile,
+    });
+    assert.equal(report.profile, contextReductionProfile);
+    assert.equal(report.passed, 3);
+    assert.deepEqual(
+      report.results.map((result) => result.id),
+      ["PFX-012", "PFX-013", "PFX-020"],
+    );
+  });
+
+  it("rejects an unsafe context-reduction result", () => {
+    assert.throws(
+      () =>
+        run({
+          spec,
+          command: [...adapter, "--wrong"],
+          revision: "test",
+          profile: contextReductionProfile,
+        }),
+      /PFX-012/,
     );
   });
 });

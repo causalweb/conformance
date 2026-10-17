@@ -19,6 +19,11 @@ process.stdin.on("end", () => {
     process.stdout.write(`${JSON.stringify(response)}\n`);
     return;
   }
+  if (input.profile === "context-reduction-v1") {
+    const retained_indices = wrong ? [] : input.case.evidence.map((_item, index) => index);
+    process.stdout.write(`${JSON.stringify({ id: input.case.id, retained_indices })}\n`);
+    return;
+  }
   if (input.profile === "http-client-confirmation-v1") {
     const result = {
       client_accepts_constrained_success: wrong

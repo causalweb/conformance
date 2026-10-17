@@ -25,17 +25,32 @@
     {
       "id": "PFX-012",
       "kind": "context-reduction",
-      "expected": []
+      "evidence": [
+        { "domain": "domain_a", "position": "5", "exp": 200 },
+        { "domain": "domain_a", "position": "8", "exp": 300 }
+      ],
+      "required_usable_until": 180,
+      "allowed_retained_positions": [["5", "8"], ["8"]]
     },
     {
       "id": "PFX-013",
       "kind": "context-reduction",
-      "expected": []
+      "evidence": [
+        { "domain": "domain_a", "position": "5", "exp": 300 },
+        { "domain": "domain_b", "position": "8", "exp": 300 }
+      ],
+      "required_usable_until": 180,
+      "allowed_retained_positions": [["5", "8"]]
     },
     {
       "id": "PFX-020",
       "kind": "context-reduction",
-      "expected": []
+      "evidence": [
+        { "domain": "domain_a", "position": "5", "exp": 300 },
+        { "domain": "domain_a", "position": "8", "exp": 150 }
+      ],
+      "required_usable_until": 180,
+      "allowed_retained_positions": [["5", "8"]]
     }
   ]
 }

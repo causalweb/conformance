@@ -20,6 +20,8 @@ Permitted outcomes are `accept`, `expired`, `reject-request`, and `unsupported`.
 
 It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context-reduction cases, and this profile tests a verifier/snapshot evaluator rather than a Core Carrier reducer. The exclusion is explicit in the profile manifest; it is not a passing result for those requirements.
 
+`context-reduction-v1` invokes the three excluded Prefix Profile carrier-reduction cases. An adapter returns strictly ordered indices into the original evidence list; the runner maps those indices back to input positions and accepts only a vector-authorized retained sequence. It therefore rejects synthesized positions, reordered input, duplicate indices, an omitted independent domain, and dropping a longer-lived item in favor of an evidence item that expires before the carrier's declared horizon.
+
 `http-client-confirmation-v1` sends 11 selected cases from `http-outcomes.json`. It exercises requirement-field rejection/limits and the client-side rule that a constrained success requires an allowed 2xx response with exactly one `Causal-Result: satisfied`; a confirmed 404 remains an application non-success. It explicitly excludes `HTTP-006`, cross-origin redirect forwarding, because that behavior belongs to an HTTP agent profile rather than a response/parser implementation.
 
 `http-observer-v1` sends all 15 cases from `http-observer.json`. It exercises a public observer API with ephemeral evidence and a synthetic fixed-cut snapshot: success and covered absence, indexed duplicate failure, the six dependency outcomes, expiry after the read, invalid/oversized/`HEAD`/inapplicable requests, authorization at both checkpoints, connection nomination, and marker-free conversion of an invalid success representation. It is neither a network-server nor storage-adapter profile. It does not test transport parsing, cancellation, TLS, CORS, proxy behavior, routing, or durable snapshot truth.
@@ -40,6 +42,7 @@ Select a non-default profile explicitly:
 
 ```sh
 node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- implementation-adapter [arguments]
+node runner.mjs --spec ../spec --profile context-reduction-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-client-confirmation-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-observer-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-transport-server-v1 -- transport-adapter [arguments]
@@ -51,6 +54,6 @@ Use the [implementation report template](REPORT_TEMPLATE.md) when publishing a r
 
 ## Status and limits
 
-The runner currently covers 32 evidence-verification cases, 17 selected prefix-evaluation cases, 11 selected HTTP client-confirmation cases, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. Context reduction, redirect forwarding, generic production-server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
+The runner currently covers 32 evidence-verification cases, 17 selected prefix-evaluation cases, three context-reduction cases, 11 selected HTTP client-confirmation cases, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. Redirect forwarding, generic production-server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
 
 Code and tooling are available under Apache-2.0 or MIT. Documentation prose is CC-BY-4.0. See [LICENSE.md](LICENSE.md).

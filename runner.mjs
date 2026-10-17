@@ -9,6 +9,7 @@ const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..");
 const PROFILE = "evidence-verification-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
+const CONTEXT_REDUCTION_PROFILE = "context-reduction-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
 const OBSERVER_PROFILE = "http-observer-v1";
 const TRANSPORT_PROFILE = "http-transport-server-v1";
@@ -44,7 +45,16 @@ function expectedPosition(value) {
 }
 
 function profileFile(name) {
-  if (![PROFILE, PREFIX_PROFILE, HTTP_PROFILE, OBSERVER_PROFILE, TRANSPORT_PROFILE].includes(name))
+  if (
+    ![
+      PROFILE,
+      PREFIX_PROFILE,
+      CONTEXT_REDUCTION_PROFILE,
+      HTTP_PROFILE,
+      OBSERVER_PROFILE,
+      TRANSPORT_PROFILE,
+    ].includes(name)
+  )
     throw new Error(`unsupported profile ${name}`);
   return resolve(root, "profiles", `${name}.json`);
 }
@@ -183,6 +193,72 @@ function runPrefix({ spec, command, revision }) {
   return {
     format: "causal-web-conformance-report-v1",
     profile: PREFIX_PROFILE,
+    spec_revision: revision,
+    passed: results.length,
+    results,
+  };
+}
+
+function runContextReduction({ spec, command, revision }) {
+  const profile = readJson(profileFile(CONTEXT_REDUCTION_PROFILE));
+  if (profile.format !== "causal-web-conformance-context-reduction-v1")
+    throw new Error("unsupported local context-reduction profile format");
+  const vectorName = string(profile.vector, "context-reduction profile vector");
+  const caseIds = profile.case_ids;
+  if (!Array.isArray(caseIds) || !caseIds.length || new Set(caseIds).size !== caseIds.length)
+    throw new Error("context-reduction profile case_ids must be a nonempty unique list");
+  if (!caseIds.every((id) => typeof id === "string"))
+    throw new Error("context-reduction profile case_ids must be strings");
+  const vector = readJson(resolve(spec, "test-vectors", vectorName));
+  if (vector.format !== "causal-web-prefix-evaluation-v1" || !Array.isArray(vector.cases))
+    throw new Error(`${vectorName} is not a prefix evaluation vector`);
+  const cases = new Map(
+    vector.cases.map((testCase) => {
+      const caseObject = object(testCase, `${vectorName} case`);
+      return [string(caseObject.id, `${vectorName} case id`), caseObject];
+    }),
+  );
+  const results = [];
+  for (const id of caseIds) {
+    const testCase = cases.get(id);
+    if (testCase?.kind !== "context-reduction")
+      throw new Error(`${id} is not a context-reduction vector case`);
+    if (!Array.isArray(testCase.evidence) || !Array.isArray(testCase.allowed_retained_positions))
+      throw new Error(`${id} has invalid context-reduction expectations`);
+    const response = invoke(command, {
+      version: 1,
+      profile: CONTEXT_REDUCTION_PROFILE,
+      vector_file: vectorName,
+      vector,
+      case: testCase,
+    });
+    if (response.id !== id || !Array.isArray(response.retained_indices))
+      throw new Error(`${id}: adapter returned an invalid context-reduction response`);
+    const indices = response.retained_indices;
+    if (
+      !indices.every(
+        (index, position) =>
+          Number.isInteger(index) &&
+          index >= 0 &&
+          index < testCase.evidence.length &&
+          (position === 0 || indices[position - 1] < index),
+      )
+    )
+      throw new Error(`${id}: retained_indices must be ordered, unique input indices`);
+    const retainedPositions = indices.map((index) => testCase.evidence[index].position);
+    if (
+      !testCase.allowed_retained_positions.some((allowed) =>
+        isDeepStrictEqual(allowed, retainedPositions),
+      )
+    )
+      throw new Error(
+        `${id}: retained positions ${JSON.stringify(retainedPositions)} are not allowed`,
+      );
+    results.push({ id, retained_indices: indices, retained_positions: retainedPositions });
+  }
+  return {
+    format: "causal-web-conformance-report-v1",
+    profile: CONTEXT_REDUCTION_PROFILE,
     spec_revision: revision,
     passed: results.length,
     results,
@@ -518,6 +594,8 @@ async function runTransport({ spec, command, revision }) {
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
+  if (profile === CONTEXT_REDUCTION_PROFILE)
+    return runContextReduction({ spec, command, revision });
   if (profile === HTTP_PROFILE) return runHttp({ spec, command, revision });
   if (profile === OBSERVER_PROFILE) return runObserver({ spec, command, revision });
   if (profile === TRANSPORT_PROFILE) return runTransport({ spec, command, revision });
@@ -572,6 +650,7 @@ if (resolve(process.argv[1] ?? "") === here) {
 
 export const profile = PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
+export const contextReductionProfile = CONTEXT_REDUCTION_PROFILE;
 export const httpProfile = HTTP_PROFILE;
 export const observerProfile = OBSERVER_PROFILE;
 export const transportProfile = TRANSPORT_PROFILE;

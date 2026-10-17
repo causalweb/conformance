@@ -1,0 +1,6 @@
+{
+  "format": "causal-web-conformance-context-reduction-v1",
+  "description": "Execution metadata for safe Prefix Profile carrier reduction. Implementations return retained indices into the original ordered evidence list; vector semantics remain in the pinned specification.",
+  "vector": "prefix-evaluation.json",
+  "case_ids": ["PFX-012", "PFX-013", "PFX-020"]
+}
