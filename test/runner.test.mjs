@@ -15,10 +15,10 @@ describe("evidence-verification runner", () => {
   it("executes every configured vector case through a JSON Lines adapter", () => {
     const report = run({ spec, command: adapter, revision: "test" });
     assert.equal(report.profile, profile);
-    assert.equal(report.passed, 3);
+    assert.equal(report.passed, 4);
     assert.deepEqual(
       report.results.map((result) => result.id),
-      ["EVD-001", "EVD-002", "SEC-001"],
+      ["EVD-001", "EVD-002", "SEC-001", "SEC-002"],
     );
   });
 

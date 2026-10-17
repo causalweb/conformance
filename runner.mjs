@@ -26,7 +26,7 @@ function string(value, name) {
 }
 
 function expected(value) {
-  if (!["accept", "expired", "reject-request"].includes(value))
+  if (!["accept", "expired", "reject-request", "unsupported"].includes(value))
     throw new Error(`unsupported expected outcome ${value}`);
   return value;
 }

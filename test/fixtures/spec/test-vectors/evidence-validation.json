@@ -5,5 +5,8 @@
   "expected_subject": "tenant-example",
   "expected_audience": "https://verifier.example/causal",
   "public_jwk": { "kty": "EC" },
-  "cases": [{ "id": "SEC-001", "expected": "expired" }]
+  "cases": [
+    { "id": "SEC-001", "expected": "expired" },
+    { "id": "SEC-002", "expected": "unsupported" }
+  ]
 }

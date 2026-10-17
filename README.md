@@ -10,7 +10,7 @@ This repository contains a language-neutral, experimental runner for Causal Web 
 {"id":"EVD-001","outcome":"accept"}
 ```
 
-Permitted outcomes are `accept`, `expired`, and `reject-request`. The runner compares the returned outcome to the authoritative vector expectation and emits a machine-readable report only if every case agrees.
+Permitted outcomes are `accept`, `expired`, `reject-request`, and `unsupported`. The runner compares the returned outcome to the authoritative vector expectation and emits a machine-readable report only if every case agrees.
 
 The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a five-second timeout and a one-megabyte output limit.
 
