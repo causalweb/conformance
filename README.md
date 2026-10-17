@@ -30,6 +30,8 @@ It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context
 
 The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a five-second timeout and a one-megabyte output limit.
 
+See [SECURITY.md](SECURITY.md) for the adapter execution boundary, loopback constraints, vulnerability reporting, and dependency-review limits.
+
 ## Run
 
 Check out the exact `causalweb/spec` revision in [SPEC_REVISION](SPEC_REVISION), then supply an adapter command after `--`:
