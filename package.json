@@ -1,0 +1,25 @@
+{
+  "name": "@causalweb/conformance",
+  "version": "0.1.0-experimental",
+  "private": true,
+  "type": "module",
+  "description": "Language-neutral Causal Web conformance harness",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/causalweb/conformance.git"
+  },
+  "license": "Apache-2.0 OR MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint --error-on-warnings .",
+    "check": "biome ci --error-on-warnings .",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15"
+  }
+}

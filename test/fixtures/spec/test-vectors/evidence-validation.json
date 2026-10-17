@@ -1,0 +1,9 @@
+{
+  "format": "causal-web-evidence-validation-v1",
+  "validation_time": 100,
+  "expected_issuer": "https://issuer.example",
+  "expected_subject": "tenant-example",
+  "expected_audience": "https://verifier.example/causal",
+  "public_jwk": { "kty": "EC" },
+  "cases": [{ "id": "SEC-001", "expected": "expired" }]
+}

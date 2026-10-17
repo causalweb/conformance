@@ -1,0 +1,16 @@
+{
+  "format": "causal-web-conformance-evidence-verification-v1",
+  "description": "Execution metadata for the initial evidence-verification profile. Vector semantics remain in the pinned specification.",
+  "vectors": {
+    "jws-evidence.json": {
+      "domains": ["https://issuer.example/domains/orders/2026"],
+      "maximum_lifetime_seconds": 86400,
+      "clock_skew_seconds": 0
+    },
+    "evidence-validation.json": {
+      "domains": ["https://issuer.example/domains/a"],
+      "maximum_lifetime_seconds": 86400,
+      "clock_skew_seconds": 0
+    }
+  }
+}
