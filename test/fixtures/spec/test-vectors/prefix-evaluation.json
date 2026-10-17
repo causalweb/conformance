@@ -17,6 +17,12 @@
       "expected": "reject-request"
     },
     {
+      "id": "PFX-010",
+      "kind": "position-validation",
+      "position": "5",
+      "expected": "accept"
+    },
+    {
       "id": "PFX-012",
       "kind": "context-reduction",
       "expected": []

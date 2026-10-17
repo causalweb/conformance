@@ -35,7 +35,7 @@ function expectedEvidence(value) {
 }
 
 function expectedPosition(value) {
-  if (!["satisfied", "reject-request"].includes(value))
+  if (!["accept", "satisfied", "reject-request"].includes(value))
     throw new Error(`unsupported expected position outcome ${value}`);
   return value;
 }

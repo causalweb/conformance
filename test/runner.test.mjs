@@ -34,10 +34,10 @@ describe("prefix-evaluation runner", () => {
   it("executes selected lineage cases and excludes carrier-reduction cases", () => {
     const report = run({ spec, command: adapter, revision: "test", profile: prefixProfile });
     assert.equal(report.profile, prefixProfile);
-    assert.equal(report.passed, 2);
+    assert.equal(report.passed, 3);
     assert.deepEqual(
       report.results.map((result) => result.id),
-      ["PFX-001", "PFX-009"],
+      ["PFX-001", "PFX-009", "PFX-010"],
     );
   });
 
