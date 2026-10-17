@@ -1,0 +1,25 @@
+{
+  "format": "causal-web-prefix-evaluation-v1",
+  "domain_a": "https://issuer.example/domains/a",
+  "domain_b": "https://issuer.example/domains/b",
+  "cases": [
+    {
+      "id": "PFX-001",
+      "requirements": [{ "domain": "domain_a", "position": "5" }],
+      "state": { "frontiers": { "domain_a": "5" } },
+      "expected": [{ "outcome": "satisfied", "disposition": "applied" }],
+      "aggregate_success": true
+    },
+    {
+      "id": "PFX-009",
+      "kind": "position-validation",
+      "position": "05",
+      "expected": "reject-request"
+    },
+    {
+      "id": "PFX-012",
+      "kind": "context-reduction",
+      "expected": []
+    }
+  ]
+}

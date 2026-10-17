@@ -1,0 +1,6 @@
+{
+  "format": "causal-web-conformance-prefix-evaluation-v1",
+  "description": "Execution metadata for prefix lineage evaluation. Vector semantics remain in the pinned specification. Context-reduction cases are intentionally excluded because this profile exercises the verifier and snapshot evaluator, not a carrier reducer.",
+  "vector": "prefix-evaluation.json",
+  "excluded_case_ids": ["PFX-012", "PFX-013", "PFX-020"]
+}

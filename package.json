@@ -17,9 +17,12 @@
     "format:check": "biome format .",
     "lint": "biome lint --error-on-warnings .",
     "check": "biome ci --error-on-warnings .",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "changeset": "changeset",
+    "changeset:status": "changeset status"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15"
+    "@biomejs/biome": "2.5.15",
+    "@changesets/cli": "3.0.3"
   }
 }

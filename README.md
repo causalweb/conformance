@@ -2,7 +2,7 @@
 
 This repository contains a language-neutral, experimental runner for Causal Web conformance profiles. The normative protocol and vector definitions remain in [`causalweb/spec`](https://github.com/causalweb/spec). This repository does not redefine protocol semantics, publish an SDK, or certify an implementation merely because it emits a passing report.
 
-## Initial profile
+## Profiles
 
 `evidence-verification-v1` sends every case from the pinned specification's `jws-evidence.json` and `evidence-validation.json` files to an implementation-provided JSON Lines adapter. For each input line, the adapter returns exactly one object:
 
@@ -11,6 +11,14 @@ This repository contains a language-neutral, experimental runner for Causal Web 
 ```
 
 Permitted outcomes are `accept`, `expired`, `reject-request`, and `unsupported`. The runner compares the returned outcome to the authoritative vector expectation and emits a machine-readable report only if every case agrees.
+
+`prefix-evaluation-v1` sends the selected cases from `prefix-evaluation.json`. It covers prefix parsing, exact 64-bit comparison, selected-state frontiers, independent domains, exclusions, unknown lineage, terminal failure, composite frontiers, expiry, and unsupported profiles. Its adapter returns ordered per-requirement outcomes and aggregate success:
+
+```json
+{"id":"PFX-004","outcomes":[{"outcome":"satisfied","disposition":"applied"},{"outcome":"unsatisfied"}],"aggregate_success":false}
+```
+
+It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context-reduction cases, and this profile tests a verifier/snapshot evaluator rather than a Core Carrier reducer. The exclusion is explicit in the profile manifest; it is not a passing result for those requirements.
 
 The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a five-second timeout and a one-megabyte output limit.
 
@@ -22,10 +30,16 @@ Check out the exact `causalweb/spec` revision in [SPEC_REVISION](SPEC_REVISION),
 node runner.mjs --spec ../spec -- implementation-adapter [arguments]
 ```
 
+Select a non-default profile explicitly:
+
+```sh
+node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- implementation-adapter [arguments]
+```
+
 The CLI rejects a spec checkout that is not at its exact pinned commit. Unit tests use a deliberately minimal fake specification fixture and do not constitute a protocol result.
 
 ## Status and limits
 
-This runner currently covers only evidence verification. Prefix evaluation, HTTP binding behavior, source commitment, projection lineage, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
+The runner currently covers 32 evidence-verification cases and 17 selected prefix-evaluation cases. Context reduction, HTTP binding behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
 
 Code and tooling are available under Apache-2.0 or MIT. Documentation prose is CC-BY-4.0. See [LICENSE.md](LICENSE.md).
