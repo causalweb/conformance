@@ -134,6 +134,15 @@ describe("HTTP redirect-agent runner", () => {
     await assert.rejects(
       run({
         spec,
+        command: [...redirectAdapter, "--malformed"],
+        revision: "test",
+        profile: redirectProfile,
+      }),
+      /requirements missing at source/,
+    );
+    await assert.rejects(
+      run({
+        spec,
         command: [...redirectAdapter, "--forward"],
         revision: "test",
         profile: redirectProfile,

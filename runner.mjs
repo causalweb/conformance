@@ -674,7 +674,7 @@ async function runRedirect({ spec, command, revision }) {
       !Array.isArray(observations.source) ||
       observations.source.length !== 1 ||
       typeof observations.source[0] !== "string" ||
-      !observations.source[0].includes(requirement) ||
+      observations.source[0].trim() !== `"${requirement}"` ||
       !Array.isArray(observations.target) ||
       observations.target.some((value) => value !== null)
     )

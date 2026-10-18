@@ -6,7 +6,9 @@ process.stdin.on("data", (chunk) => {
 process.stdin.on("end", async () => {
   try {
     const input = JSON.parse(source);
-    const header = `"${input.requirement}"`;
+    const header = process.argv.includes("--malformed")
+      ? `not-a-list-${input.requirement}`
+      : `"${input.requirement}"`;
     const response = await fetch(input.url, {
       headers: { "Causal-Require": header },
       redirect: "manual",
