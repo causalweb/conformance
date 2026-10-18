@@ -14,6 +14,8 @@ Permitted outcomes are `accept`, `expired`, `reject-request`, and `unsupported`.
 
 `uri-identities-draft-v1` is a separate proposal-only profile. It runs four signed cases from the exact proposal revision recorded in its manifest, including a case-specific trusted issuer that differs only in scheme case from the signed issuer. It uses the evidence-verification adapter contract, but its report is explicitly a draft result; it does not change `SPEC_REVISION`, the pinned evidence profile, or any release claim.
 
+`terminal-failure-draft-v1` is another proposal-only profile. It sends 17 ordered setup, observation, operator-decision, resolution, accounting, and partition steps to a fresh adapter process for each step. The runner supplies a disposable workspace; the adapter must persist its view state there and return both the outcome and durable audit-entry count. The sequence exercises candidate TF-001–004, TF-008–010, and TF-012 from the pinned proposal. It does not exercise unauthorized operator access, transient delivery errors, contract rollover, or the concurrent cut race, and it cannot certify the adapter's storage durability or operator controls under a host or power failure.
+
 `prefix-evaluation-v1` sends the selected cases from `prefix-evaluation.json`. It covers prefix parsing, exact 64-bit comparison, selected-state frontiers, independent domains, exclusions, unknown lineage, terminal failure, composite frontiers, expiry, and unsupported profiles. Its adapter returns ordered per-requirement outcomes and aggregate success:
 
 ```json
@@ -54,14 +56,15 @@ node runner.mjs --spec ../spec --profile http-redirect-agent-v1 -- client-adapte
 node runner.mjs --spec ../spec --profile http-observer-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-transport-server-v1 -- transport-adapter [arguments]
 node runner.mjs --spec ../spec-proposal --profile uri-identities-draft-v1 -- implementation-adapter [arguments]
+node runner.mjs --spec ../terminal-proposal --profile terminal-failure-draft-v1 -- stateful-adapter [arguments]
 ```
 
-The CLI rejects a spec checkout that is not at the exact revision for the selected profile. The draft URI profile requires its proposal commit; all other profiles require `SPEC_REVISION`. Unit tests use a deliberately minimal fake specification fixture and do not constitute a protocol result.
+The CLI rejects a spec checkout that is not at the exact revision for the selected profile. Each draft profile requires its own proposal commit; all other profiles require `SPEC_REVISION`. Unit tests use a deliberately minimal fake adapter and do not constitute a protocol result.
 
 Use the [implementation report template](REPORT_TEMPLATE.md) when publishing a result. It records the runner/spec revisions, commands, trust and storage assumptions, explicit exclusions, and limits that a raw pass count cannot establish.
 
 ## Status and limits
 
-The pinned runner profiles currently cover 32 evidence-verification cases, 17 selected prefix-evaluation cases, three context-reduction cases, 11 selected HTTP client-confirmation cases, one cross-origin redirect-agent case, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. The separate proposal-only URI profile covers four additional signed cases against its exact draft revision. Broader redirect behavior, generic production-server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
+The pinned runner profiles currently cover 32 evidence-verification cases, 17 selected prefix-evaluation cases, three context-reduction cases, 11 selected HTTP client-confirmation cases, one cross-origin redirect-agent case, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. The separate proposal-only URI profile covers four signed cases; the terminal-failure draft profile covers 17 stateful steps. Broader redirect behavior, generic production-server behavior, source commitment, host-level projection durability, lifecycle failures, interoperability deployments, performance, and security posture require separate evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
 
 Code and tooling are available under Apache-2.0 or MIT. Documentation prose is CC-BY-4.0. See [LICENSE.md](LICENSE.md).

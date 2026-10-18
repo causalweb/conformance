@@ -11,6 +11,7 @@ import {
   profile,
   redirectProfile,
   run,
+  terminalDraftProfile,
   transportProfile,
   uriDraftProfile,
 } from "../runner.mjs";
@@ -22,6 +23,7 @@ const spec = resolve(root, "test", "fixtures", "spec");
 const adapter = [process.execPath, fixture];
 const transportAdapter = [process.execPath, resolve(root, "test", "transport-fixture-server.mjs")];
 const redirectAdapter = [process.execPath, resolve(root, "test", "redirect-client.mjs")];
+const terminalAdapter = [process.execPath, resolve(root, "test", "terminal-fixture-adapter.mjs")];
 
 describe("evidence-verification runner", () => {
   it("executes every configured vector case through a JSON Lines adapter", () => {
@@ -63,6 +65,37 @@ describe("draft URI-identity runner", () => {
       () =>
         run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: uriDraftProfile }),
       /URI-004/,
+    );
+  });
+});
+
+describe("draft stateful terminal-failure runner", () => {
+  it("runs every step in a fresh adapter process against retained partition state", () => {
+    const report = run({
+      spec,
+      command: terminalAdapter,
+      revision: "test",
+      profile: terminalDraftProfile,
+    });
+    assert.equal(report.profile, terminalDraftProfile);
+    assert.equal(report.passed, 17);
+    assert.deepEqual(report.results.at(-1), {
+      id: "TF-012-B",
+      outcome: "unsatisfied",
+      audit_count: 0,
+    });
+  });
+
+  it("rejects a mismatched persisted failure outcome", () => {
+    assert.throws(
+      () =>
+        run({
+          spec,
+          command: [...terminalAdapter, "--wrong"],
+          revision: "test",
+          profile: terminalDraftProfile,
+        }),
+      /TF-002-A/,
     );
   });
 });

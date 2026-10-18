@@ -1,7 +1,8 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { createConnection } from "node:net";
-import { basename, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
@@ -9,6 +10,7 @@ const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..");
 const PROFILE = "evidence-verification-v1";
 const URI_DRAFT_PROFILE = "uri-identities-draft-v1";
+const TERMINAL_DRAFT_PROFILE = "terminal-failure-draft-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
 const CONTEXT_REDUCTION_PROFILE = "context-reduction-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
@@ -53,6 +55,7 @@ function profileFile(name) {
     ![
       PROFILE,
       URI_DRAFT_PROFILE,
+      TERMINAL_DRAFT_PROFILE,
       PREFIX_PROFILE,
       CONTEXT_REDUCTION_PROFILE,
       HTTP_PROFILE,
@@ -709,10 +712,59 @@ async function runRedirect({ spec, command, revision }) {
   }
 }
 
+function runTerminalFailure({ command, revision }) {
+  const profile = readJson(profileFile(TERMINAL_DRAFT_PROFILE));
+  if (profile.format !== "causal-web-conformance-terminal-failure-draft-v1")
+    throw new Error("unsupported local terminal-failure profile format");
+  if (!Array.isArray(profile.steps) || profile.steps.length === 0)
+    throw new Error("terminal-failure profile lacks steps");
+  const tempRoot = realpathSync(tmpdir());
+  const workspace = mkdtempSync(join(tempRoot, "causalweb-terminal-profile-"));
+  const target = realpathSync(workspace);
+  if (dirname(target) !== tempRoot || !basename(target).startsWith("causalweb-terminal-profile-"))
+    throw new Error("unsafe terminal-failure workspace cleanup target");
+  const results = [];
+  try {
+    for (const value of profile.steps) {
+      const step = object(value, "terminal-failure step");
+      const id = string(step.id, "terminal-failure step id");
+      const expected = object(step.expected, `${id} expected`);
+      const outcome = string(expected.outcome, `${id} expected outcome`);
+      if (!Number.isSafeInteger(expected.audit_count) || expected.audit_count < 0)
+        throw new Error(`${id} has an invalid audit count`);
+      const response = invoke(command, {
+        version: 1,
+        profile: TERMINAL_DRAFT_PROFILE,
+        workspace,
+        step: { id, operation: step.operation, partition: step.partition, position: step.position },
+      });
+      if (
+        response.id !== id ||
+        response.outcome !== outcome ||
+        response.audit_count !== expected.audit_count
+      )
+        throw new Error(
+          `${id}: expected ${JSON.stringify(expected)}, adapter returned ${JSON.stringify(response)}`,
+        );
+      results.push({ id, outcome, audit_count: expected.audit_count });
+    }
+  } finally {
+    rmSync(target, { recursive: true });
+  }
+  return {
+    format: "causal-web-conformance-report-v1",
+    profile: TERMINAL_DRAFT_PROFILE,
+    spec_revision: revision,
+    passed: results.length,
+    results,
+  };
+}
+
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === URI_DRAFT_PROFILE)
     return runEvidence({ spec, command, revision, profileName: URI_DRAFT_PROFILE });
+  if (profile === TERMINAL_DRAFT_PROFILE) return runTerminalFailure({ command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
   if (profile === CONTEXT_REDUCTION_PROFILE)
     return runContextReduction({ spec, command, revision });
@@ -756,8 +808,8 @@ if (resolve(process.argv[1] ?? "") === here) {
   try {
     const { spec, command, profile } = arguments_();
     const revision =
-      profile === URI_DRAFT_PROFILE
-        ? readJson(profileFile(URI_DRAFT_PROFILE)).proposal_revision
+      profile === URI_DRAFT_PROFILE || profile === TERMINAL_DRAFT_PROFILE
+        ? readJson(profileFile(profile)).proposal_revision
         : readFileSync(resolve(root, "SPEC_REVISION"), "utf8").trim();
     if (!/^[0-9a-f]{40}$/.test(revision)) throw new Error("invalid local SPEC_REVISION");
     const actual = execFileSync("git", ["-C", spec, "rev-parse", "HEAD"], {
@@ -774,6 +826,7 @@ if (resolve(process.argv[1] ?? "") === here) {
 
 export const profile = PROFILE;
 export const uriDraftProfile = URI_DRAFT_PROFILE;
+export const terminalDraftProfile = TERMINAL_DRAFT_PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
 export const contextReductionProfile = CONTEXT_REDUCTION_PROFILE;
 export const httpProfile = HTTP_PROFILE;

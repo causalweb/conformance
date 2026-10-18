@@ -1,0 +1,124 @@
+{
+  "format": "causal-web-conformance-terminal-failure-draft-v1",
+  "description": "Proposal-only process-restart sequence for view-owned terminal failure state. The adapter owns one durable store per partition; the runner invokes a new process for every step.",
+  "proposal_revision": "501a5fd6e5289748c482e34711c8e90b42f60aff",
+  "steps": [
+    {
+      "id": "TF-SETUP-A",
+      "operation": "setup",
+      "partition": "a",
+      "expected": { "outcome": "ready", "audit_count": 0 }
+    },
+    {
+      "id": "TF-001",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "unsatisfied", "audit_count": 0 }
+    },
+    {
+      "id": "TF-MARK-3",
+      "operation": "mark",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "recorded", "audit_count": 1 }
+    },
+    {
+      "id": "TF-002-A",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "failed", "audit_count": 1 }
+    },
+    {
+      "id": "TF-002-B",
+      "operation": "observe",
+      "partition": "a",
+      "position": "4",
+      "expected": { "outcome": "failed", "audit_count": 1 }
+    },
+    {
+      "id": "TF-003",
+      "operation": "observe",
+      "partition": "a",
+      "position": "2",
+      "expected": { "outcome": "unsatisfied", "audit_count": 1 }
+    },
+    {
+      "id": "TF-004",
+      "operation": "observe",
+      "partition": "a",
+      "position": "1",
+      "expected": { "outcome": "satisfied", "audit_count": 1 }
+    },
+    {
+      "id": "TF-008",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "failed", "audit_count": 1 }
+    },
+    {
+      "id": "TF-SETUP-B",
+      "operation": "setup",
+      "partition": "b",
+      "expected": { "outcome": "ready", "audit_count": 0 }
+    },
+    {
+      "id": "TF-012-A",
+      "operation": "observe",
+      "partition": "b",
+      "position": "3",
+      "expected": { "outcome": "unsatisfied", "audit_count": 0 }
+    },
+    {
+      "id": "TF-RESOLVE-3",
+      "operation": "resolve",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "resolved", "audit_count": 2 }
+    },
+    {
+      "id": "TF-RESOLVE-AGAIN",
+      "operation": "resolve",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "resolved", "audit_count": 2 }
+    },
+    {
+      "id": "TF-009",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "unsatisfied", "audit_count": 2 }
+    },
+    {
+      "id": "TF-MARK-AGAIN",
+      "operation": "mark",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "recorded", "audit_count": 3 }
+    },
+    {
+      "id": "TF-ACCOUNT-2",
+      "operation": "account",
+      "partition": "a",
+      "position": "2",
+      "expected": { "outcome": "applied", "audit_count": 3 }
+    },
+    {
+      "id": "TF-010",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "satisfied", "audit_count": 3 }
+    },
+    {
+      "id": "TF-012-B",
+      "operation": "observe",
+      "partition": "b",
+      "position": "3",
+      "expected": { "outcome": "unsatisfied", "audit_count": 0 }
+    }
+  ]
+}

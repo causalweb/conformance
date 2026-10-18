@@ -29,6 +29,8 @@ Do not list a profile as passing if the runner exited unsuccessfully, the specif
 
 If reporting `uri-identities-draft-v1`, label it proposal-only and record its separate proposal revision. A draft pass is not evidence that the pinned evidence profile or public protocol revision changed.
 
+If reporting `terminal-failure-draft-v1`, label it proposal-only, record its separate proposal revision, and identify which of the candidate TF scenarios remain untested. Its fresh-process adapter sequence is not a host power-loss or external-operator exercise.
+
 ## Reproduction
 
 Record the exact commands, operating system, runtime/compiler version, and the complete machine-readable runner reports. Commands MUST use an exact detached checkout of the specification revision recorded above.
@@ -42,6 +44,7 @@ node runner.mjs --spec ../spec --profile http-client-confirmation-v1 -- [adapter
 node runner.mjs --spec ../spec --profile http-redirect-agent-v1 -- [client-adapter command]
 node runner.mjs --spec ../spec --profile http-observer-v1 -- [adapter command]
 node runner.mjs --spec ../spec --profile http-transport-server-v1 -- [transport-adapter command]
+node runner.mjs --spec ../terminal-proposal --profile terminal-failure-draft-v1 -- [stateful-adapter command]
 ```
 
 - OS and architecture: `[value]`

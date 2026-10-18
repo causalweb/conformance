@@ -8,6 +8,8 @@ The operator supplies an adapter command. The runner invokes that program direct
 
 Each JSON Lines invocation has a five-second timeout and a one-megabyte output limit. The transport profile applies the same limit to readiness output and each raw HTTP response, permits only an explicit `http://127.0.0.1:PORT` readiness origin, and terminates the child when its cases finish. These controls limit accidental test-process behavior; they do not make a malicious adapter safe or provide a general denial-of-service defense.
 
+The draft terminal-failure profile gives the adapter a newly created workspace under the local temporary directory, launches a fresh process per step, and removes that workspace after the sequence. The adapter still runs with the operator's full privileges and could read or write outside it. Use only disposable synthetic data; never point the profile at a live deployment database.
+
 Fixture inputs and results are public test data. Do not pass production evidence, private keys, or live-service credentials to an adapter command. A passing report attests only to the selected profile and exact specification revision; it does not authenticate the adapter, establish production trust, or replace review of the implementation under test.
 
 ## Dependency snapshot
