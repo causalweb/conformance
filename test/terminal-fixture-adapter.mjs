@@ -8,8 +8,16 @@ process.stdin.on("data", (chunk) => {
 });
 process.stdin.on("end", () => {
   const input = JSON.parse(source);
-  if (input.profile !== "terminal-failure-draft-v1" || !["a", "b"].includes(input.step.partition))
+  if (
+    input.profile !== "terminal-failure-draft-v1" ||
+    !["a", "b", "a-v2"].includes(input.step.partition)
+  )
     throw new Error("invalid terminal fixture input");
+  if (
+    input.step.partition === "a-v2" &&
+    (input.step.contract !== "reference-orders/v2" || input.step.schema !== "orders/v2")
+  )
+    throw new Error("invalid terminal fixture contract");
   const path = join(input.workspace, `${input.step.partition}.json`);
   const { operation, position, id } = input.step;
   let state;

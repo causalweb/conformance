@@ -1,6 +1,6 @@
 {
   "format": "causal-web-conformance-terminal-failure-draft-v1",
-  "description": "Proposal-only process-restart sequence for view-owned terminal failure state. The adapter owns one durable store per partition; the runner invokes a new process for every step.",
+  "description": "Proposal-only process-restart sequence for view-owned terminal failure state. Partitions a and b use reference-orders/v1; a-v2 uses the same subject as a but a separate reference-orders/v2 projection store. The runner invokes a new process for every step.",
   "proposal_revision": "501a5fd6e5289748c482e34711c8e90b42f60aff",
   "steps": [
     {
@@ -53,6 +53,30 @@
     },
     {
       "id": "TF-008",
+      "operation": "observe",
+      "partition": "a",
+      "position": "3",
+      "expected": { "outcome": "failed", "audit_count": 1 }
+    },
+    {
+      "id": "TF-007-SETUP-V2",
+      "operation": "setup",
+      "partition": "a-v2",
+      "contract": "reference-orders/v2",
+      "schema": "orders/v2",
+      "expected": { "outcome": "ready", "audit_count": 0 }
+    },
+    {
+      "id": "TF-007-V2",
+      "operation": "observe",
+      "partition": "a-v2",
+      "contract": "reference-orders/v2",
+      "schema": "orders/v2",
+      "position": "3",
+      "expected": { "outcome": "unsatisfied", "audit_count": 0 }
+    },
+    {
+      "id": "TF-007-V1",
       "operation": "observe",
       "partition": "a",
       "position": "3",
