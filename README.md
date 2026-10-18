@@ -34,7 +34,7 @@ It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context
 
 `http-transport-server-v1` launches a test-only loopback adapter, obtains ephemeral signed requirements from its fixture endpoint, and sends raw HTTP/1.1 exchanges. It covers repeated `Causal-Require` field lines, response serialization, `HEAD`, `Connection` nomination, ordinary-route fallthrough, malformed requirements, and marker-free local errors. Its `X-CausalWeb-Conformance-Read-Calls` response field is test instrumentation. It does not test a generic production server, TLS, HTTP/2 or HTTP/3, proxies, CORS, cancellation, authorization integration, or durable state.
 
-The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a five-second timeout and a one-megabyte output limit.
+The runner invokes the adapter directly, never through a shell. The adapter is local trusted test code; do not run an unreviewed command. Each invocation has a one-megabyte output limit. The stateful terminal-failure draft allows 15 seconds per fresh-process invocation for durable-store cold starts; other adapter invocations retain a five-second timeout.
 
 See [SECURITY.md](SECURITY.md) for the adapter execution boundary, loopback constraints, vulnerability reporting, and dependency-review limits.
 

@@ -18,6 +18,7 @@ const REDIRECT_PROFILE = "http-redirect-agent-v1";
 const OBSERVER_PROFILE = "http-observer-v1";
 const TRANSPORT_PROFILE = "http-transport-server-v1";
 const ADAPTER_TIMEOUT_MS = 5000;
+const STATEFUL_ADAPTER_TIMEOUT_MS = 15000;
 const MAX_ADAPTER_OUTPUT_BYTES = 1024 * 1024;
 
 function readJson(path) {
@@ -68,14 +69,14 @@ function profileFile(name) {
   return resolve(root, "profiles", `${name}.json`);
 }
 
-function invoke(command, input) {
+function invoke(command, input, timeoutMs = ADAPTER_TIMEOUT_MS) {
   const [program, ...arguments_] = command;
   if (!program) throw new Error("an adapter command is required after --");
   const result = spawnSync(program, arguments_, {
     encoding: "utf8",
     input: `${JSON.stringify(input)}\n`,
     maxBuffer: MAX_ADAPTER_OUTPUT_BYTES,
-    timeout: ADAPTER_TIMEOUT_MS,
+    timeout: timeoutMs,
     windowsHide: true,
   });
   if (result.error) throw new Error(`adapter did not start: ${result.error.message}`);
@@ -732,19 +733,23 @@ function runTerminalFailure({ command, revision }) {
       const outcome = string(expected.outcome, `${id} expected outcome`);
       if (!Number.isSafeInteger(expected.audit_count) || expected.audit_count < 0)
         throw new Error(`${id} has an invalid audit count`);
-      const response = invoke(command, {
-        version: 1,
-        profile: TERMINAL_DRAFT_PROFILE,
-        workspace,
-        step: {
-          id,
-          operation: step.operation,
-          partition: step.partition,
-          contract: step.contract,
-          schema: step.schema,
-          position: step.position,
+      const response = invoke(
+        command,
+        {
+          version: 1,
+          profile: TERMINAL_DRAFT_PROFILE,
+          workspace,
+          step: {
+            id,
+            operation: step.operation,
+            partition: step.partition,
+            contract: step.contract,
+            schema: step.schema,
+            position: step.position,
+          },
         },
-      });
+        STATEFUL_ADAPTER_TIMEOUT_MS,
+      );
       if (
         response.id !== id ||
         response.outcome !== outcome ||
