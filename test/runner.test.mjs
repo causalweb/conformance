@@ -12,6 +12,7 @@ import {
   redirectProfile,
   run,
   transportProfile,
+  uriDraftProfile,
 } from "../runner.mjs";
 
 const here = fileURLToPath(import.meta.url);
@@ -37,6 +38,31 @@ describe("evidence-verification runner", () => {
     assert.throws(
       () => run({ spec, command: [...adapter, "--wrong"], revision: "test" }),
       /EVD-002/,
+    );
+  });
+});
+
+describe("draft URI-identity runner", () => {
+  it("runs proposal cases with case-scoped exact issuer trust", () => {
+    const report = run({
+      spec,
+      command: [...adapter, "--assert-uri-trust"],
+      revision: "test-proposal",
+      profile: uriDraftProfile,
+    });
+    assert.equal(report.profile, uriDraftProfile);
+    assert.equal(report.spec_revision, "test-proposal");
+    assert.deepEqual(
+      report.results.map((result) => result.id),
+      ["URI-001", "URI-004"],
+    );
+  });
+
+  it("rejects an incorrect URI outcome", () => {
+    assert.throws(
+      () =>
+        run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: uriDraftProfile }),
+      /URI-004/,
     );
   });
 });

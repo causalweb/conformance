@@ -1,0 +1,12 @@
+{
+  "format": "causal-web-conformance-uri-identities-draft-v1",
+  "description": "Unreleased proposal-only signed URI identity cases; not part of the pinned protocol conformance claim.",
+  "proposal_revision": "b5a216510708553f7ac763d02ec12755df78d7f1",
+  "vectors": {
+    "uri-identities.json": {
+      "domains": ["https://issuer.example/domains/a", "https://issuer.example/domains/a%23part"],
+      "maximum_lifetime_seconds": 86400,
+      "clock_skew_seconds": 0
+    }
+  }
+}

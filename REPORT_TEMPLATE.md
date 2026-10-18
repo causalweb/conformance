@@ -27,6 +27,8 @@ List each profile, its result, and every explicit exclusion.
 
 Do not list a profile as passing if the runner exited unsuccessfully, the specification checkout differed from the runner pin, an adapter transformed vector input outside the profile contract, or a required case was skipped.
 
+If reporting `uri-identities-draft-v1`, label it proposal-only and record its separate proposal revision. A draft pass is not evidence that the pinned evidence profile or public protocol revision changed.
+
 ## Reproduction
 
 Record the exact commands, operating system, runtime/compiler version, and the complete machine-readable runner reports. Commands MUST use an exact detached checkout of the specification revision recorded above.

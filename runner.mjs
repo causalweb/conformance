@@ -8,6 +8,7 @@ import { isDeepStrictEqual } from "node:util";
 const here = fileURLToPath(import.meta.url);
 const root = resolve(here, "..");
 const PROFILE = "evidence-verification-v1";
+const URI_DRAFT_PROFILE = "uri-identities-draft-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
 const CONTEXT_REDUCTION_PROFILE = "context-reduction-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
@@ -51,6 +52,7 @@ function profileFile(name) {
   if (
     ![
       PROFILE,
+      URI_DRAFT_PROFILE,
       PREFIX_PROFILE,
       CONTEXT_REDUCTION_PROFILE,
       HTTP_PROFILE,
@@ -80,10 +82,13 @@ function invoke(command, input) {
   return object(JSON.parse(lines[0]), "adapter response");
 }
 
-function runEvidence({ spec, command, revision }) {
-  const profile = readJson(profileFile(PROFILE));
-  if (profile.format !== "causal-web-conformance-evidence-verification-v1")
-    throw new Error("unsupported local profile format");
+function runEvidence({ spec, command, revision, profileName = PROFILE }) {
+  const profile = readJson(profileFile(profileName));
+  const format =
+    profileName === URI_DRAFT_PROFILE
+      ? "causal-web-conformance-uri-identities-draft-v1"
+      : "causal-web-conformance-evidence-verification-v1";
+  if (profile.format !== format) throw new Error("unsupported local profile format");
   const configured = object(profile.vectors, "profile vectors");
   const results = [];
   for (const [name, execution] of Object.entries(configured)) {
@@ -101,7 +106,12 @@ function runEvidence({ spec, command, revision }) {
         vector,
         case: caseObject,
         trust: {
-          issuer: string(vector.expected_issuer, `${name} expected_issuer`),
+          issuer: string(
+            profileName === URI_DRAFT_PROFILE
+              ? (caseObject.trusted_issuer ?? vector.expected_issuer)
+              : vector.expected_issuer,
+            `${name} trusted issuer`,
+          ),
           subject: string(vector.expected_subject, `${name} expected_subject`),
           audience: string(vector.expected_audience, `${name} expected_audience`),
           public_jwk: object(vector.public_jwk, `${name} public_jwk`),
@@ -118,7 +128,7 @@ function runEvidence({ spec, command, revision }) {
   }
   return {
     format: "causal-web-conformance-report-v1",
-    profile: PROFILE,
+    profile: profileName,
     spec_revision: revision,
     passed: results.length,
     results,
@@ -701,6 +711,8 @@ async function runRedirect({ spec, command, revision }) {
 
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
+  if (profile === URI_DRAFT_PROFILE)
+    return runEvidence({ spec, command, revision, profileName: URI_DRAFT_PROFILE });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
   if (profile === CONTEXT_REDUCTION_PROFILE)
     return runContextReduction({ spec, command, revision });
@@ -743,13 +755,16 @@ function arguments_() {
 if (resolve(process.argv[1] ?? "") === here) {
   try {
     const { spec, command, profile } = arguments_();
-    const revision = readFileSync(resolve(root, "SPEC_REVISION"), "utf8").trim();
+    const revision =
+      profile === URI_DRAFT_PROFILE
+        ? readJson(profileFile(URI_DRAFT_PROFILE)).proposal_revision
+        : readFileSync(resolve(root, "SPEC_REVISION"), "utf8").trim();
     if (!/^[0-9a-f]{40}$/.test(revision)) throw new Error("invalid local SPEC_REVISION");
     const actual = execFileSync("git", ["-C", spec, "rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim();
     if (actual !== revision)
-      throw new Error("spec checkout is not the pinned revision; use an exact detached checkout");
+      throw new Error("spec checkout is not the profile revision; use an exact detached checkout");
     console.log(JSON.stringify(await run({ spec, command, revision, profile })));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
@@ -758,6 +773,7 @@ if (resolve(process.argv[1] ?? "") === here) {
 }
 
 export const profile = PROFILE;
+export const uriDraftProfile = URI_DRAFT_PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
 export const contextReductionProfile = CONTEXT_REDUCTION_PROFILE;
 export const httpProfile = HTTP_PROFILE;
