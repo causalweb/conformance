@@ -6,6 +6,14 @@ process.stdin.on("data", (chunk) => {
 process.stdin.on("end", () => {
   const input = JSON.parse(source);
   const wrong = process.argv.includes("--wrong");
+  if (
+    process.argv.includes("--assert-uri-trust") &&
+    input.vector_file === "uri-identities.json" &&
+    input.trust.issuer !== (input.case.trusted_issuer ?? input.vector.expected_issuer)
+  ) {
+    process.exitCode = 1;
+    return;
+  }
   if (input.profile === "prefix-evaluation-v1") {
     const response = input.case.kind
       ? { id: input.case.id, outcome: wrong ? "accept" : input.case.expected }

@@ -1,0 +1,12 @@
+{
+  "format": "causal-web-uri-identities-v1",
+  "validation_time": 100,
+  "expected_issuer": "https://issuer.example",
+  "expected_subject": "tenant-example",
+  "expected_audience": "https://verifier.example/causal",
+  "public_jwk": { "kty": "EC" },
+  "cases": [
+    { "id": "URI-001", "expected": "accept" },
+    { "id": "URI-004", "expected": "reject-request", "trusted_issuer": "HTTPS://issuer.example" }
+  ]
+}
