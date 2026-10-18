@@ -9,6 +9,7 @@
     {
       "id": "HTTP-006",
       "response": { "status": 302, "cross_origin": true },
+      "forward_requirements_automatically": false,
       "client_accepts_constrained_success": false
     },
     {

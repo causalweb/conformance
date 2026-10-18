@@ -24,6 +24,8 @@ It intentionally excludes `PFX-012`, `PFX-013`, and `PFX-020`: those are context
 
 `http-client-confirmation-v1` sends 11 selected cases from `http-outcomes.json`. It exercises requirement-field rejection/limits and the client-side rule that a constrained success requires an allowed 2xx response with exactly one `Causal-Result: satisfied`; a confirmed 404 remains an application non-success. It explicitly excludes `HTTP-006`, cross-origin redirect forwarding, because that behavior belongs to an HTTP agent profile rather than a response/parser implementation.
 
+`http-redirect-agent-v1` runs `HTTP-006` against two runner-controlled loopback origins. The adapter receives a URL and opaque requirement, then makes one constrained request with its real HTTP client. The runner checks that the first origin received the requirement, the redirect target did not, and the adapter did not accept the 302 as confirmed. This covers one cross-origin HTTP redirect, not same-origin redirects, TLS, proxies, or browser behavior.
+
 `http-observer-v1` sends all 15 cases from `http-observer.json`. It exercises a public observer API with ephemeral evidence and a synthetic fixed-cut snapshot: success and covered absence, indexed duplicate failure, the six dependency outcomes, expiry after the read, invalid/oversized/`HEAD`/inapplicable requests, authorization at both checkpoints, connection nomination, and marker-free conversion of an invalid success representation. It is neither a network-server nor storage-adapter profile. It does not test transport parsing, cancellation, TLS, CORS, proxy behavior, routing, or durable snapshot truth.
 
 `http-transport-server-v1` launches a test-only loopback adapter, obtains ephemeral signed requirements from its fixture endpoint, and sends raw HTTP/1.1 exchanges. It covers repeated `Causal-Require` field lines, response serialization, `HEAD`, `Connection` nomination, ordinary-route fallthrough, malformed requirements, and marker-free local errors. Its `X-CausalWeb-Conformance-Read-Calls` response field is test instrumentation. It does not test a generic production server, TLS, HTTP/2 or HTTP/3, proxies, CORS, cancellation, authorization integration, or durable state.
@@ -46,6 +48,7 @@ Select a non-default profile explicitly:
 node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile context-reduction-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-client-confirmation-v1 -- implementation-adapter [arguments]
+node runner.mjs --spec ../spec --profile http-redirect-agent-v1 -- client-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-observer-v1 -- implementation-adapter [arguments]
 node runner.mjs --spec ../spec --profile http-transport-server-v1 -- transport-adapter [arguments]
 ```
@@ -56,6 +59,6 @@ Use the [implementation report template](REPORT_TEMPLATE.md) when publishing a r
 
 ## Status and limits
 
-The runner currently covers 32 evidence-verification cases, 17 selected prefix-evaluation cases, three context-reduction cases, 11 selected HTTP client-confirmation cases, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. Redirect forwarding, generic production-server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate profiles and evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
+The runner currently covers 32 evidence-verification cases, 17 selected prefix-evaluation cases, three context-reduction cases, 11 selected HTTP client-confirmation cases, one cross-origin redirect-agent case, 15 fixed-cut HTTP observer cases, and 7 raw loopback transport-server cases. Broader redirect behavior, generic production-server behavior, source commitment, projection lineage durability, lifecycle failures, interoperability deployments, performance, and security posture require separate evidence. A passing result is necessary for the declared profile only; it is neither complete conformance nor production certification.
 
 Code and tooling are available under Apache-2.0 or MIT. Documentation prose is CC-BY-4.0. See [LICENSE.md](LICENSE.md).

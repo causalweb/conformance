@@ -11,6 +11,7 @@ const PROFILE = "evidence-verification-v1";
 const PREFIX_PROFILE = "prefix-evaluation-v1";
 const CONTEXT_REDUCTION_PROFILE = "context-reduction-v1";
 const HTTP_PROFILE = "http-client-confirmation-v1";
+const REDIRECT_PROFILE = "http-redirect-agent-v1";
 const OBSERVER_PROFILE = "http-observer-v1";
 const TRANSPORT_PROFILE = "http-transport-server-v1";
 const ADAPTER_TIMEOUT_MS = 5000;
@@ -53,6 +54,7 @@ function profileFile(name) {
       PREFIX_PROFILE,
       CONTEXT_REDUCTION_PROFILE,
       HTTP_PROFILE,
+      REDIRECT_PROFILE,
       OBSERVER_PROFILE,
       TRANSPORT_PROFILE,
     ].includes(name)
@@ -446,7 +448,10 @@ function header(response, name) {
   return values?.join(", ") ?? null;
 }
 
-async function launchTransport(command) {
+async function launchTransport(
+  command,
+  readyFormat = "causal-web-conformance-transport-server-v1",
+) {
   const [program, ...arguments_] = command;
   if (!program) throw new Error("a transport adapter command is required after --");
   const child = spawn(program, arguments_, {
@@ -493,7 +498,7 @@ async function launchTransport(command) {
           JSON.parse(output.slice(0, newline)),
           "transport adapter ready message",
         );
-        if (value.format !== "causal-web-conformance-transport-server-v1")
+        if (value.format !== readyFormat)
           throw new Error("transport adapter used an unsupported ready format");
         const origin = new URL(string(value.origin, "transport adapter origin"));
         if (origin.protocol !== "http:" || origin.hostname !== "127.0.0.1" || !origin.port)
@@ -621,12 +626,86 @@ async function runTransport({ spec, command, revision }) {
   }
 }
 
+async function runRedirect({ spec, command, revision }) {
+  const settings = readJson(profileFile(REDIRECT_PROFILE));
+  if (settings.format !== "causal-web-conformance-http-redirect-agent-v1")
+    throw new Error("unsupported local redirect profile format");
+  const vectorName = string(settings.vector, "redirect profile vector");
+  const vector = readJson(resolve(spec, "test-vectors", vectorName));
+  if (vector.format !== "causal-web-http-outcomes-v1" || !Array.isArray(vector.cases))
+    throw new Error(`${vectorName} is not an HTTP outcome vector`);
+  const testCase = vector.cases.find((entry) => entry.id === "HTTP-006");
+  if (testCase?.response?.status !== 302 || testCase.response.cross_origin !== true)
+    throw new Error("HTTP-006 must describe a cross-origin redirect");
+  if (
+    testCase.forward_requirements_automatically !== false ||
+    testCase.client_accepts_constrained_success !== false
+  )
+    throw new Error("HTTP-006 has unsupported redirect expectations");
+
+  const { child, origin } = await launchTransport(
+    [process.execPath, resolve(root, "redirect-fixture.mjs")],
+    "causal-web-conformance-redirect-fixture-v1",
+  );
+  try {
+    const requirement = "opaque-test-token-HTTP-006";
+    const response = invoke(command, {
+      version: 1,
+      profile: REDIRECT_PROFILE,
+      case: testCase,
+      url: new URL("redirect", origin).toString(),
+      requirement,
+    });
+    if (
+      !isDeepStrictEqual(response, {
+        id: testCase.id,
+        result: { client_accepts_constrained_success: false },
+      })
+    )
+      throw new Error(`HTTP-006: adapter returned ${JSON.stringify(response)}`);
+    const report = await rawRequest(origin, [
+      "GET /report HTTP/1.1",
+      "Host: 127.0.0.1",
+      "Connection: close",
+    ]);
+    if (report.status !== 200) throw new Error("redirect fixture report unavailable");
+    const observations = object(JSON.parse(report.body), "redirect fixture report");
+    if (
+      !Array.isArray(observations.source) ||
+      observations.source.length !== 1 ||
+      typeof observations.source[0] !== "string" ||
+      !observations.source[0].includes(requirement) ||
+      !Array.isArray(observations.target) ||
+      observations.target.some((value) => value !== null)
+    )
+      throw new Error("HTTP-006: requirements missing at source or forwarded to redirect target");
+    return {
+      format: "causal-web-conformance-report-v1",
+      profile: REDIRECT_PROFILE,
+      spec_revision: revision,
+      passed: 1,
+      results: [
+        {
+          id: testCase.id,
+          result: {
+            forward_requirements_automatically: false,
+            client_accepts_constrained_success: false,
+          },
+        },
+      ],
+    };
+  } finally {
+    await stopTransport(child);
+  }
+}
+
 export function run({ spec, command, revision, profile = PROFILE }) {
   if (profile === PROFILE) return runEvidence({ spec, command, revision });
   if (profile === PREFIX_PROFILE) return runPrefix({ spec, command, revision });
   if (profile === CONTEXT_REDUCTION_PROFILE)
     return runContextReduction({ spec, command, revision });
   if (profile === HTTP_PROFILE) return runHttp({ spec, command, revision });
+  if (profile === REDIRECT_PROFILE) return runRedirect({ spec, command, revision });
   if (profile === OBSERVER_PROFILE) return runObserver({ spec, command, revision });
   if (profile === TRANSPORT_PROFILE) return runTransport({ spec, command, revision });
   throw new Error(`unsupported profile ${profile}`);
@@ -682,6 +761,7 @@ export const profile = PROFILE;
 export const prefixProfile = PREFIX_PROFILE;
 export const contextReductionProfile = CONTEXT_REDUCTION_PROFILE;
 export const httpProfile = HTTP_PROFILE;
+export const redirectProfile = REDIRECT_PROFILE;
 export const observerProfile = OBSERVER_PROFILE;
 export const transportProfile = TRANSPORT_PROFILE;
 export const localRoot = root;

@@ -9,6 +9,7 @@ import {
   observerProfile,
   prefixProfile,
   profile,
+  redirectProfile,
   run,
   transportProfile,
 } from "../runner.mjs";
@@ -19,6 +20,7 @@ const fixture = resolve(root, "test", "fixture-adapter.mjs");
 const spec = resolve(root, "test", "fixtures", "spec");
 const adapter = [process.execPath, fixture];
 const transportAdapter = [process.execPath, resolve(root, "test", "transport-fixture-server.mjs")];
+const redirectAdapter = [process.execPath, resolve(root, "test", "redirect-client.mjs")];
 
 describe("evidence-verification runner", () => {
   it("executes every configured vector case through a JSON Lines adapter", () => {
@@ -104,6 +106,48 @@ describe("HTTP client-confirmation runner", () => {
     assert.throws(
       () => run({ spec, command: [...adapter, "--wrong"], revision: "test", profile: httpProfile }),
       /HTTP-001/,
+    );
+  });
+});
+
+describe("HTTP redirect-agent runner", () => {
+  it("checks the initial request and the cross-origin redirect target", async () => {
+    const report = await run({
+      spec,
+      command: redirectAdapter,
+      revision: "test",
+      profile: redirectProfile,
+    });
+    assert.equal(report.passed, 1);
+    assert.deepEqual(report.results, [
+      {
+        id: "HTTP-006",
+        result: {
+          forward_requirements_automatically: false,
+          client_accepts_constrained_success: false,
+        },
+      },
+    ]);
+  });
+
+  it("rejects forwarding or acceptance by the adapter", async () => {
+    await assert.rejects(
+      run({
+        spec,
+        command: [...redirectAdapter, "--forward"],
+        revision: "test",
+        profile: redirectProfile,
+      }),
+      /forwarded to redirect target/,
+    );
+    await assert.rejects(
+      run({
+        spec,
+        command: [...redirectAdapter, "--accept"],
+        revision: "test",
+        profile: redirectProfile,
+      }),
+      /adapter returned/,
     );
   });
 });
