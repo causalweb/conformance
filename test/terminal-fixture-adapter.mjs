@@ -6,8 +6,10 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
   source += chunk;
 });
-process.stdin.on("end", () => {
+process.stdin.on("end", async () => {
   const input = JSON.parse(source);
+  if (process.argv.includes("--slow-start") && input.step.id === "TF-SETUP-A")
+    await new Promise((resolve) => setTimeout(resolve, 5500));
   if (
     input.profile !== "terminal-failure-draft-v1" ||
     !["a", "b", "a-v2"].includes(input.step.partition)

@@ -70,6 +70,16 @@ describe("draft URI-identity runner", () => {
 });
 
 describe("draft stateful terminal-failure runner", () => {
+  it("allows a bounded cold start beyond the stateless adapter deadline", () => {
+    const report = run({
+      spec,
+      command: [...terminalAdapter, "--slow-start"],
+      revision: "test",
+      profile: terminalDraftProfile,
+    });
+    assert.equal(report.passed, 20);
+  });
+
   it("runs every step in a fresh adapter process against retained partition state", () => {
     const report = run({
       spec,
