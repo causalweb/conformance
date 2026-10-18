@@ -736,7 +736,14 @@ function runTerminalFailure({ command, revision }) {
         version: 1,
         profile: TERMINAL_DRAFT_PROFILE,
         workspace,
-        step: { id, operation: step.operation, partition: step.partition, position: step.position },
+        step: {
+          id,
+          operation: step.operation,
+          partition: step.partition,
+          contract: step.contract,
+          schema: step.schema,
+          position: step.position,
+        },
       });
       if (
         response.id !== id ||

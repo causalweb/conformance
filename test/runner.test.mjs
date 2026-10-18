@@ -78,7 +78,15 @@ describe("draft stateful terminal-failure runner", () => {
       profile: terminalDraftProfile,
     });
     assert.equal(report.profile, terminalDraftProfile);
-    assert.equal(report.passed, 17);
+    assert.equal(report.passed, 20);
+    assert.deepEqual(
+      report.results.find((result) => result.id === "TF-007-V2"),
+      {
+        id: "TF-007-V2",
+        outcome: "unsatisfied",
+        audit_count: 0,
+      },
+    );
     assert.deepEqual(report.results.at(-1), {
       id: "TF-012-B",
       outcome: "unsatisfied",
