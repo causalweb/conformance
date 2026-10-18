@@ -1,0 +1,5 @@
+{
+  "format": "causal-web-conformance-http-redirect-agent-v1",
+  "description": "Runner-controlled cross-origin HTTP redirect for the pinned HTTP-006 client-agent case. The runner checks that the initial request carries the opaque requirement and that the redirect target never receives it.",
+  "vector": "http-outcomes.json"
+}

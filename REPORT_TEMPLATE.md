@@ -21,6 +21,7 @@ List each profile, its result, and every explicit exclusion.
 | `prefix-evaluation-v1` | `[pass/fail/not run]` | `[count or report artifact]` | `PFX-012, PFX-013, PFX-020` are outside this evaluator-only profile |
 | `context-reduction-v1` | `[pass/fail/not run]` | `[count or report artifact]` | Carrier reduction only; it does not establish evaluator, transport, or deployment conformance |
 | `http-client-confirmation-v1` | `[pass/fail/not run]` | `[count or report artifact]` | `HTTP-006` redirect forwarding is outside this response/parser profile |
+| `http-redirect-agent-v1` | `[pass/fail/not run]` | `[count or report artifact]` | One cross-origin loopback HTTP redirect only; no TLS, proxy, browser, or same-origin claim |
 | `http-observer-v1` | `[pass/fail/not run]` | `[count or report artifact]` | Fixed-cut in-process observer behavior only; no network server, routing, transport, or storage-adapter claim |
 | `http-transport-server-v1` | `[pass/fail/not run]` | `[count or report artifact]` | Raw loopback transport profile only; no TLS, proxy, HTTP/2+, durable-state, or deployment claim |
 
@@ -36,6 +37,7 @@ node runner.mjs --spec ../spec -- [adapter command]
 node runner.mjs --spec ../spec --profile prefix-evaluation-v1 -- [adapter command]
 node runner.mjs --spec ../spec --profile context-reduction-v1 -- [adapter command]
 node runner.mjs --spec ../spec --profile http-client-confirmation-v1 -- [adapter command]
+node runner.mjs --spec ../spec --profile http-redirect-agent-v1 -- [client-adapter command]
 node runner.mjs --spec ../spec --profile http-observer-v1 -- [adapter command]
 node runner.mjs --spec ../spec --profile http-transport-server-v1 -- [transport-adapter command]
 ```
